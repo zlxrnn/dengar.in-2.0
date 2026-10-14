@@ -8,6 +8,14 @@
       "artifactBytes": 21837,
       "sourceSha256": "9a694aba57719c6954c2fb8ab88ddef2f418806d8a3ffaebb05c7bbcef606d48",
       "artifactSha256": "0dd16fc2b0a1be0006191c402dd5a8b26e671cc4cad11ac62a3f79832e944ade"
+    },
+    {
+      "source": "cases.v1.jsonl",
+      "artifact": "cases.v1.pb.zst",
+      "sourceBytes": 41714,
+      "artifactBytes": 9561,
+      "sourceSha256": "732d97db7da55a9691d74f702284999c3b21a389fbc36863f7de68ffde4272a5",
+      "artifactSha256": "0ec5e326577db08dfc0e2f0e9ed64810feed22b22c22062980806561ae312eb6"
     }
   ]
 }
