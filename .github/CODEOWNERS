@@ -1,0 +1,95 @@
+# Pemilik wilayah file — lihat docs/COLLABORATION_RULES.md. Aturan terakhir yang cocok menang.
+# Baris "# TODO" menunggu handle GitHub pemiliknya; hapus "# TODO " dan isi handle-nya.
+
+# Default dan file bersama: Release Owner
+*                                              @iqbalscript
+
+# --- YanIanZ: CareBridge, Core Wellbeing, test bench ---
+/apps/web/src/app/care-passport/               @YanIanZ
+/apps/web/src/components/carePassport/        @YanIanZ
+/apps/web/src/lib/carePassport*.ts             @YanIanZ
+/apps/web/src/lib/api/carePassport*.ts         @YanIanZ
+/apps/web/src/lib/api/openingLinesHandler.ts   @YanIanZ
+/apps/web/src/app/api/care-passport/           @YanIanZ
+/services/orchestrator/src/carePassportPipeline.ts  @YanIanZ
+/services/orchestrator/src/openingLinesPipeline.ts  @YanIanZ
+/packages/prompts/src/carePassport.ts          @YanIanZ
+/packages/prompts/src/openingLines.ts          @YanIanZ
+/tests/carebridge/                             @YanIanZ
+/apps/web/src/app/chat/                        @YanIanZ
+/apps/web/src/app/checkin/                     @YanIanZ
+/apps/web/src/app/journal/                     @YanIanZ
+/apps/web/src/app/mission/                     @YanIanZ
+/apps/web/src/app/resources/                   @YanIanZ
+/apps/web/src/app/dashboard/                   @YanIanZ
+/apps/web/src/app/perjalanan/                  @YanIanZ
+/apps/web/src/app/assessment/                  @YanIanZ
+/apps/web/src/app/report/                      @YanIanZ
+/apps/web/src/app/api/chat/                    @YanIanZ
+/apps/web/src/app/api/report/                  @YanIanZ
+/apps/web/src/lib/api/chatHandler.ts           @YanIanZ
+/apps/web/src/lib/api/chatHistory.ts           @YanIanZ
+/apps/web/src/lib/api/aiCache.ts               @YanIanZ
+/tests/chat/                                   @YanIanZ
+/tests/gamification/                           @YanIanZ
+/tests/assessment/                             @YanIanZ
+/tests/session/                                @YanIanZ
+/tests/api/                                    @YanIanZ
+/scripts/testbench/                            @YanIanZ
+/docker/testbench/                             @YanIanZ
+/docker-compose.testbench.yml                  @YanIanZ
+/docs/TESTBENCH.md                             @YanIanZ
+/docs/CAREBRIDGE_ARCHITECTURE.md               @YanIanZ
+/docs/CAREBRIDGE_STRUCTURE_MERMAID.md          @YanIanZ
+/docs/CB-035_GOOGLE_DEEPMIND_GEMMA_AMD.md      @YanIanZ
+
+# --- Bryan: AMD inference & orchestrator providers ---
+# TODO /services/orchestrator/src/providers/   @<bryan>
+# TODO /services/orchestrator/src/orchestrator.ts @<bryan>
+# TODO /services/orchestrator/src/debiaser/    @<bryan>
+# TODO /services/orchestrator/src/fallback/    @<bryan>
+# TODO /services/orchestrator/src/guardrails/  @<bryan>
+# TODO /tests/orchestrator/                    @<bryan>
+# TODO /tests/carebridge/amdProvider.test.mjs  @<bryan>
+# TODO /docs/AMD_SETUP.md                      @<bryan>
+# TODO /docs/AI_POLICY.md                      @<bryan>
+
+# --- Immanuel: Safety, Privacy, Community ---
+# TODO /services/crisis-engine/                @<immanuel>
+# TODO /services/validator/                    @<immanuel>
+# TODO /services/auth/                         @<immanuel>
+# TODO /services/persistence/                  @<immanuel>
+# TODO /supabase/                              @<immanuel>
+# TODO /apps/web/src/app/crisis/               @<immanuel>
+# TODO /apps/web/src/app/consent/              @<immanuel>
+# TODO /apps/web/src/app/recovery/             @<immanuel>
+# TODO /apps/web/src/app/forum/                @<immanuel>
+# TODO /apps/web/src/app/api/forum/            @<immanuel>
+# TODO /apps/web/src/app/api/admin/            @<immanuel>
+# TODO /apps/web/src/app/api/sync/             @<immanuel>
+# TODO /apps/web/src/lib/crypto/               @<immanuel>
+# TODO /tests/crisis/ /tests/validator/ /tests/security/ /tests/forum/ /tests/crypto/ /tests/auth/ /tests/persistence/ /tests/persistence-pg/  @<immanuel>
+# TODO /docs/CAREBRIDGE_SAFETY_POLICY.md       @<immanuel>
+
+# --- Syafa: Voice, a11y, i18n ---
+# TODO /apps/web/src/app/ruang-ngobrol/        @<syafa>
+# TODO /apps/web/src/i18n/                     @<syafa>
+# TODO /apps/web/src/components/ui/            @<syafa>
+# TODO /tests/voice/                           @<syafa>
+
+# --- Raditya: Dokumentasi ---
+# TODO /README.md                              @<raditya>
+# TODO /docs/PRD.md /docs/SUBMISSION_COPY.md /docs/research/ /docs/drafts/  @<raditya>
+
+# File bersama: Release Owner (ditulis ulang di akhir agar tidak tertimpa)
+/package.json                                  @iqbalscript
+/package-lock.json                             @iqbalscript
+/.env.example                                  @iqbalscript
+/.gitignore                                    @iqbalscript
+/apps/web/src/app/layout.tsx                   @iqbalscript
+/apps/web/src/app/page.tsx                     @iqbalscript
+/apps/web/src/app/globals.css                  @iqbalscript
+/apps/web/src/components/Navbar.tsx            @iqbalscript
+/packages/types/                               @iqbalscript
+/.github/                                      @iqbalscript
+/docs/COLLABORATION_RULES.md                   @iqbalscript @YanIanZ
