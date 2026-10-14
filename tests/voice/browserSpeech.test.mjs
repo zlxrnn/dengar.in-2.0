@@ -7,6 +7,7 @@ import {
   appendTranscript,
   cancelSpeech,
   getSpeechRecognitionConstructor,
+  isMicrophonePermissionDenied,
   isSpeechRecognitionSupported,
   isSpeechSynthesisSupported,
   planExpressiveSpeech,
@@ -15,6 +16,7 @@ import {
   speakExpressively,
   speakOneAtATime,
   speechRecognitionErrorMessage,
+  startUnlessMicrophoneDenied,
 } from '../../apps/web/src/lib/browserSpeech.ts';
 import { evaluateCrisisInput } from '../../services/crisis-engine/src/crisisDetector.ts';
 
@@ -158,5 +160,76 @@ describe('Browser speech utility', () => {
     const transcript = appendTranscript('Aku', 'mau bunuh diri');
     const crisis = evaluateCrisisInput(transcript, '18-24');
     assert.equal(crisis.isCrisis, true);
+  });
+});
+
+// Bug QA 14 Okt (SCRUM-23): an already-denied microphone must not leave the UI
+// "listening" in browsers that never fire the 'not-allowed' recognition error.
+describe('Microphone permission pre-check before recognition.start()', () => {
+  const permissionsTarget = (state) => ({
+    navigator: { permissions: { query: async (descriptor) => {
+      assert.equal(descriptor.name, 'microphone');
+      return { state };
+    } } },
+  });
+
+  it('reports an already-denied microphone and nothing else as denied', async () => {
+    assert.equal(await isMicrophonePermissionDenied(permissionsTarget('denied')), true);
+    assert.equal(await isMicrophonePermissionDenied(permissionsTarget('granted')), false);
+    assert.equal(await isMicrophonePermissionDenied(permissionsTarget('prompt')), false);
+  });
+
+  it('permission denied: shows the denial state immediately without calling recognition.start()', async () => {
+    let started = 0;
+    let denied = 0;
+    const result = await startUnlessMicrophoneDenied(permissionsTarget('denied'), () => { started += 1; }, () => { denied += 1; });
+    assert.equal(result, 'denied');
+    assert.equal(started, 0, 'recognition.start() must not run');
+    assert.equal(denied, 1);
+    assert.match(speechRecognitionErrorMessage('not-allowed', 'id'), /Izin mikrofon belum diberikan\. Kamu tetap bisa menulis pesan\./);
+    assert.match(speechRecognitionErrorMessage('not-allowed', 'en'), /Microphone permission was not given\. You can still type your message\./);
+  });
+
+  it('permission granted or prompt: calls start() as before', async () => {
+    for (const state of ['granted', 'prompt']) {
+      let started = 0;
+      let denied = 0;
+      assert.equal(await startUnlessMicrophoneDenied(permissionsTarget(state), () => { started += 1; }, () => { denied += 1; }), 'started');
+      assert.equal(started, 1);
+      assert.equal(denied, 0);
+    }
+  });
+
+  it('Permissions API missing (Safari/iOS, no navigator.permissions): calls start() as before', async () => {
+    for (const target of [undefined, {}, { navigator: {} }, { navigator: { permissions: {} } }]) {
+      let started = 0;
+      let denied = 0;
+      assert.equal(await isMicrophonePermissionDenied(target), false);
+      assert.equal(await startUnlessMicrophoneDenied(target, () => { started += 1; }, () => { denied += 1; }), 'started');
+      assert.equal(started, 1);
+      assert.equal(denied, 0);
+    }
+  });
+
+  it("query throws or rejects (unknown 'microphone' descriptor): calls start() as before", async () => {
+    const rejecting = { navigator: { permissions: { query: async () => { throw new TypeError('microphone is not a valid PermissionName'); } } } };
+    const throwing = { navigator: { permissions: { query: () => { throw new TypeError('not supported'); } } } };
+    for (const target of [rejecting, throwing]) {
+      let started = 0;
+      let denied = 0;
+      assert.equal(await isMicrophonePermissionDenied(target), false);
+      assert.equal(await startUnlessMicrophoneDenied(target, () => { started += 1; }, () => { denied += 1; }), 'started');
+      assert.equal(started, 1);
+      assert.equal(denied, 0);
+    }
+  });
+
+  it('both voice pages route recognition.start() through the pre-check and keep the existing denial copy', () => {
+    for (const path of ['../../apps/web/src/app/chat/page.tsx', '../../apps/web/src/app/ruang-ngobrol/page.tsx']) {
+      const source = readFileSync(new URL(path, import.meta.url), 'utf8');
+      assert.match(source, /startUnlessMicrophoneDenied\(window, \(\) => \{/, `${path} must pre-check the microphone permission`);
+      assert.match(source, /speechRecognitionErrorMessage\('not-allowed'/, `${path} must reuse the existing denial message`);
+      assert.ok(source.indexOf('startUnlessMicrophoneDenied(window') < source.indexOf('recognition.start()'), `${path} must start recognition only inside the pre-check`);
+    }
   });
 });
