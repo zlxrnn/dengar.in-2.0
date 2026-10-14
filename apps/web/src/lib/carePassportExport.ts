@@ -1,4 +1,5 @@
-import type { CarePassport, EvidenceField } from '@dengarin/types';
+import type { CarePassport, EvidenceField, SelfHelpSuggestion } from '@dengarin/types';
+import { getSelfHelpCard, selfHelpAttribution, selfHelpLicenseLabel } from '@dengarin/config';
 import { LOCALE_TAG, type Language } from '../i18n/language.ts';
 import { carePassportText } from '../i18n/pages/carePassport.ts';
 
@@ -15,6 +16,13 @@ import { carePassportText } from '../i18n/pages/carePassport.ts';
  *
  * `lang` only changes the fixed headings and labels; the user's own text and
  * the disclaimer are written exactly as approved.
+ *
+ * SCRUM-45: the self-help cards the user kept are appended as their own
+ * section. Their text comes from the knowledge base (never from the model),
+ * each with its source line, licence and, for CC BY-NC-SA material, the
+ * adaptation disclaimer the licence requires. The quote the model gave as
+ * the reason IS exported here: it is the user's own sentence and explains
+ * why the card is on the page.
  */
 
 export type CarePassportExportFormat = 'md' | 'txt';
@@ -118,9 +126,43 @@ export function buildCarePassportExport(
     lines.push('');
   }
 
+  const selfHelp = selfHelpExportLines(passport.selfHelp ?? [], lang, md);
+  if (selfHelp.length > 0) {
+    lines.push(h2(labels.selfHelp));
+    lines.push(...selfHelp);
+    lines.push('');
+  }
+
   lines.push(h2(text.important));
   lines.push(quoteBlock(passport.disclaimer));
   lines.push('');
 
   return lines.join('\n');
+}
+
+/**
+ * One block per kept card: title, the user's own reason quote, the fixed
+ * steps, when to seek help, cautions, and the source/licence line. Unknown
+ * ids (should not happen after validation) are skipped rather than invented.
+ */
+function selfHelpExportLines(items: SelfHelpSuggestion[], lang: Language, md: boolean): string[] {
+  const text = carePassportText[lang].exportFile.selfHelp;
+  const out: string[] = [];
+  const cards = items.map((item) => ({ item, card: getSelfHelpCard(item.cardId) }));
+  if (!cards.some((c) => c.card)) return out;
+  out.push(text.intro, '');
+  for (const { item, card } of cards) {
+    if (!card) continue;
+    out.push(md ? `### ${card.title[lang]}` : card.title[lang].toUpperCase());
+    out.push(`${text.why}: "${item.reasonQuote}"`);
+    card.steps[lang].forEach((step, i) => out.push(`${i + 1}. ${step}`));
+    out.push(`${text.seekHelp}: ${card.seekHelpWhen[lang]}`);
+    if (card.cautions) out.push(`${text.cautions}: ${card.cautions[lang]}`);
+    const attribution = selfHelpAttribution(card);
+    const source = `${text.source}: ${attribution.publisher}, ${attribution.title} (${selfHelpLicenseLabel(card, lang)}). ${attribution.url}`;
+    out.push(attribution.adapted ? `${source} ${text.adapted}` : source);
+    out.push('');
+  }
+  while (out.length > 0 && out[out.length - 1] === '') out.pop();
+  return out;
 }

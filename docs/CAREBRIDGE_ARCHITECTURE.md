@@ -1,7 +1,7 @@
 # Arsitektur Dengar.in CareBridge (AMD Track 2)
 
 Modul: **CareBridge** (nama modul di dalam produk Dengar.in). Event: AMD Developer Hackathon ACT III, Track 2 Health and Wellbeing.
-Ditulis 13–14 Oktober 2026 dari pembacaan kode di working tree branch `main`; **diperbarui 14 Oktober 2026** setelah F-A "Bukti Bertanggal", F-B "Kalimat Pembuka per Tujuan", dan test handler/atribusi/klien masuk ke working tree, dengan hasil `npm run test:carebridge` pada tanggal yang sama (237/237 lulus, §8).
+Ditulis 13–14 Oktober 2026 dari pembacaan kode di working tree branch `main`; **diperbarui 14 Oktober 2026** setelah F-A "Bukti Bertanggal", F-B "Kalimat Pembuka per Tujuan", dan test handler/atribusi/klien masuk ke working tree, dengan hasil `npm run test:carebridge` pada tanggal yang sama (237/237 lulus, §8); **diperbarui 15 Oktober 2026** untuk SCRUM-45 "Langkah yang bisa dicoba" (kartu self-help dari basis pengetahuan + rencana keselamatan statis), 363/363 lulus (§8).
 
 **Status jujur:**
 - Lapisan inti (tipe, prompt, redaksi PII, adapter AMD, pipeline Care Passport, pipeline kalimat pembuka, validator) **ada dan teruji** dengan server/model tiruan.
@@ -20,21 +20,23 @@ flowchart TD
     U([Pengguna dewasa 18+]) --> C2[ConsentStep: opt-in pemrosesan AI<br/>terpisah dari ekspor · tolak = jalur catatan manual<br/>ADA tanpa test]
     C2 --> IN[IntakeStep: cerita ≤ 4000 karakter<br/>+ EvidencePicker F-A: pilih entri jurnal/check-in<br/>30 hari terakhir dari perangkat · ADA, teruji di carePassportClient.test]
     IN -->|POST /api/care-passport/preview<br/>segments: cerita + entri terpilih| G{Gerbang krisis deterministik<br/>pada teks MENTAH semua segmen digabung,<br/>di handler dan di pipeline<br/>ADA: evaluateCrisisInput + isUrgentHelpRequest}
-    G -- isCrisis atau minta bantuan darurat --> IH[IMMEDIATE_HELP_SCREEN<br/>ImmediateHelp: kontak darurat<br/>provider AI dipanggil 0 kali]
+    G -- isCrisis atau minta bantuan darurat --> IH[IMMEDIATE_HELP_SCREEN<br/>ImmediateHelp: kontak darurat PERTAMA,<br/>lalu SafetyPlanCards statis dari 2 kartu safety_plan KB<br/>provider AI dipanggil 0 kali · SCRUM-45]
     G -- lolos --> R[RedactionPreview: temuan PII per segmen dari server;<br/>jenis keras selalu disamarkan, jenis lunak boleh dibiarkan<br/>ADA: detectPii/redactPii + handler teruji]
     R -->|POST /api/care-passport mode generate<br/>segments + keepSoftPii + aiConsent| CK{aiConsent?}
     CK -- tidak --> PU0[PROVIDER_UNAVAILABLE<br/>ManualNote alasan declined]
     CK -- ya --> P[Prompt Care Passport<br/>hanya segmen TERSANITASI, dipisah ¶<br/>ADA]
+    KB[(Basis pengetahuan self-help<br/>packages/config/src/selfHelpCards.v1.json<br/>30 kartu, SCRUM-46)] -. katalog id: judul — topik,<br/>tanpa safety_plan .-> P
     P --> A[Inferensi AMD<br/>ADA: adapter OpenAI-compatible<br/>RENCANA: endpoint nyata]
     A -- timeout / error / JSON rusak --> NX{Provider berikutnya?}
     NX -- ada --> A
     NX -- habis --> PU[PROVIDER_UNAVAILABLE<br/>ManualNote + tombol coba lagi<br/>providerId none · isAmd false]
-    A -- rawText --> V[Validator grounding + atribusi F-A<br/>ADA: validateCarePassportDraft,<br/>sourceRef per fakta, completeness]
+    A -- rawText --> V[Validator grounding + atribusi F-A<br/>ADA: validateCarePassportDraft,<br/>sourceRef per fakta, completeness,<br/>groundSelfHelp: id dikenal non-safety_plan + reasonQuote berdasar, maks. 3 · SCRUM-45]
     V --> S{Pemilihan state<br/>AI hanya bisa mengeskalasi}
     S -- severity high, atau humanSupportSuggested<br/>dengan humanSupportQuote berdasar SCRUM-44 --> HS[HUMAN_SUPPORT_RECOMMENDED]
     S -- concerns kosong, atau hanya concern<br/>yang diketahui + model bertanya --> NC[NEEDS_CLARIFICATION<br/>ClarificationStep: 1 pertanyaan,<br/>jawaban jadi segmen clarification, maks. 3 putaran]
     S -- berdasar --> RR[READY_FOR_USER_REVIEW]
-    RR --> UR[PassportReview: koreksi/konfirmasi/hapus,<br/>label sumber bertanggal, needsReview, Setujui<br/>ADA tanpa test]
+    RR --> UR[PassportReview: koreksi/konfirmasi/hapus,<br/>label sumber bertanggal, needsReview, Setujui<br/>+ SelfHelpSteps: teks kartu dari KB, kutipan alasan, sumber/lisensi · SCRUM-45<br/>ADA tanpa test]
+    KB -. teks langkah per id .-> UR
     HS --> UR
     NC --> IN
     UR --> EX[ExportActions: unduh .md/.txt<br/>hanya setelah user_approved<br/>ADA, builder teruji di route.test]
@@ -58,15 +60,16 @@ Pembagian tanggung jawab redaksi: pipeline **menerima** teks/segmen tersanitasi 
 
 | Lapisan | File | Status | Peran |
 |---|---|---|---|
-| Tipe kontrak | `packages/types/src/index.ts` (bagian Care Passport) | ADA | `EvidenceField` (+ `sourceRef`), `CarePassportSegment`, `EvidenceRef`, `CarePassportCompleteness`, `CarePassport` v1, `CarePassportResultState` (5 state), `CarePassportProvenance`, `CarePassportResult` |
-| Prompt Care Passport | `packages/prompts/src/carePassport.ts` | ADA (teruji: `carePassportPrompt.test.mjs`) | System prompt berbahasa Indonesia (kutipan verbatim, tanpa diagnosis/obat/persentase, maks. 1 klarifikasi). **SCRUM-44:** kriteria eksplisit `humanSupportSuggested` (daftar positif a–e dan daftar negatif bila fungsi harian berjalan) plus `humanSupportQuote` wajib; **SCRUM-47:** aturan pengisian `dailyImpact` (satu dampak per butir, frekuensi di sini), `duration` (hanya frasa waktu pengguna), `relevantContext` (pemicu, yang sudah dicoba, dukungan), dan 3–5 `questionsForProfessional` yang menyambung ke satu fakta dan tidak mengarahkan. Tanpa few-shot; 5,5 ribu karakter (dijaga test, baseline 2,7 ribu). Segmen dirender dengan satu header sumber per segmen, dipisah `¶` persis seperti teks grounding, di dalam blok data; penanda tiruan dibuang (`attribution.test.mjs`) |
+| Tipe kontrak | `packages/types/src/index.ts` (bagian Care Passport) | ADA | `EvidenceField` (+ `sourceRef`), `CarePassportSegment`, `EvidenceRef`, `CarePassportCompleteness`, `CarePassport` v1 (+ `selfHelp?: SelfHelpSuggestion[]`, SCRUM-45, opsional dan kompatibel ke belakang), `SelfHelpSuggestion { cardId, reasonQuote }`, `CarePassportResultState` (5 state), `CarePassportProvenance`, `CarePassportResult` |
+| Basis pengetahuan self-help | `packages/config/src/selfHelpCards.v1.json` + `selfHelpCards.ts` | ADA (teruji: `selfHelpCards.test.mjs`) | 30 kartu SCRUM-46 (16 topik, dwibahasa, sumber + lisensi) sebagai sumber kebenaran; accessor `getSelfHelpCard`, `SELF_HELP_SELECTABLE_CARD_IDS` (28, tanpa `safety_plan`), `SAFETY_PLAN_CARD_IDS` (2), `selfHelpCatalogForPrompt(lang)` (baris `id: judul — topik`, ~2,5 ribu karakter), `selfHelpAttribution` (`adapted` untuk CC BY-NC-SA), `selfHelpLicenseLabel`. Artefak `.pb.zst` + manifest dibangun `npm run dataset:build`. Dipakai prompt, validator, UI, ekspor, runner dataset |
+| Prompt Care Passport | `packages/prompts/src/carePassport.ts` | ADA (teruji: `carePassportPrompt.test.mjs`) | System prompt berbahasa Indonesia (kutipan verbatim, tanpa diagnosis/obat/persentase, maks. 1 klarifikasi). **SCRUM-44:** kriteria eksplisit `humanSupportSuggested` (daftar positif a–e dan daftar negatif bila fungsi harian berjalan) plus `humanSupportQuote` wajib; **SCRUM-47:** aturan pengisian `dailyImpact` (satu dampak per butir, frekuensi di sini), `duration` (hanya frasa waktu pengguna), `relevantContext` (pemicu, yang sudah dicoba, dukungan), dan 3–5 `questionsForProfessional` yang menyambung ke satu fakta dan tidak mengarahkan. Tanpa few-shot. **SCRUM-45:** aturan 14 `selfHelp: [{ cardId, reasonQuote }]` (0–3, hanya hal yang disebut pengguna, kutipan pendek persis, tanpa menulis langkah) + KATALOG KARTU di akhir prompt; 8,6 ribu karakter (~2,4 ribu token; dijaga test < 9 000, baseline 2,7 ribu → 5,5 ribu SCRUM-44/47). Segmen dirender dengan satu header sumber per segmen, dipisah `¶` persis seperti teks grounding, di dalam blok data; penanda tiruan dibuang (`attribution.test.mjs`) |
 | Gerbang krisis | `services/crisis-engine/src/crisisDetector.ts` (`evaluateCrisisInput`) | ADA (modul lama, dipakai ulang) | Aturan frasa deterministik bahasa Indonesia dan Inggris, `severity` none/high/crisis, daftar kontak darurat statis; bracket usia tak dikenal → seluruh katalog. **SCRUM-44:** rule `passive-ideation` / `en-passive-ideation` (ide pasif tanpa rencana → `high`), lihat `docs/CRISIS_CLASSIFICATION.md` |
 | Permintaan bantuan darurat | `services/orchestrator/src/carePassportPipeline.ts` (`isUrgentHelpRequest`) | ADA | Regex "butuh bantuan darurat", "aku dalam bahaya", "hubungkan aku ke layanan darurat"; **SCRUM-44:** juga "I need emergency/urgent/immediate help", "I am in danger", "I'm not safe", "connect me to emergency services"; dihormati tanpa penilaian model |
 | Redaksi PII | `services/validator/src/piiRedactor.ts` (`detectPii`, `redactPii`, `containsPii`, `joinSegments`) | ADA | Email, nomor HP Indonesia, NIK 16 digit, URL, handle medsos, kartu (Luhn), petunjuk alamat, petunjuk nama setelah frasa perkenalan. Offset relatif ke teks segmen |
 | Adapter AMD | `services/orchestrator/src/providers/amdProvider.ts` (`createAmdProvider`, `probeAmdEndpoint`, `normalizeAmdBaseUrl`) | ADA (teruji dengan fetch tiruan) | Klien chat-completions OpenAI-compatible (vLLM sendiri atau gateway seperti Token Factory); `id` = `amd:<model>`, `isAmd: true`; JSON mode mati secara bawaan; secret disamarkan dari pesan error |
 | Kontrak provider | `services/orchestrator/src/providers/types.ts` | ADA | `LLMProvider { id, isConfigured, generate }`, sama dengan DeepSeek/Gemini/OpenRouter |
 | Pipeline Care Passport | `services/orchestrator/src/carePassportPipeline.ts` (`runCarePassportPipeline`) | ADA | Orkestrasi urutan wajib, pemilihan state, atribusi per segmen dan `completeness`; stateless; provider default hanya AMD bila terkonfigurasi |
-| Validator grounding | `services/validator/src/carePassport.ts` (`validateCarePassportDraft`, `parseModelJson`, `isGroundedQuote`) | ADA | Setiap fakta wajib `sourceQuote` yang ditemukan di teks tersanitasi; kutipan yang hanya ada lintas segmen tidak di-ground; buang label diagnosis (`DIAGNOSTIC_LABEL`, kecuali atribusi klinisi di `relevantContext`), instruksi medis, dan **setiap** persentase yang tidak ditulis pengguna; `reviewStatus` dan `disclaimer` milik server. **SCRUM-44:** `humanSupportSuggested: true` hanya bertahan bila `humanSupportQuote` berdasar (`groundHumanSupport`); jika tidak → `false` + warning `ungrounded_escalation_dropped` |
+| Validator grounding | `services/validator/src/carePassport.ts` (`validateCarePassportDraft`, `parseModelJson`, `isGroundedQuote`) | ADA | Setiap fakta wajib `sourceQuote` yang ditemukan di teks tersanitasi; kutipan yang hanya ada lintas segmen tidak di-ground; buang label diagnosis (`DIAGNOSTIC_LABEL`, kecuali atribusi klinisi di `relevantContext`), instruksi medis, dan **setiap** persentase yang tidak ditulis pengguna; `reviewStatus` dan `disclaimer` milik server. **SCRUM-44:** `humanSupportSuggested: true` hanya bertahan bila `humanSupportQuote` berdasar (`groundHumanSupport`); jika tidak → `false` + warning `ungrounded_escalation_dropped`. **SCRUM-45:** `groundSelfHelp` menerima hanya id dari `SELF_HELP_SELECTABLE_CARD_IDS` (`safety_plan` ditolak) dengan `reasonQuote` berdasar, maks. 3, duplikat digabung, kunci lain (mis. `steps` buatan model) dibuang; pembuangan → warning `self_help_dropped`, bukan `droppedClaims` |
 | Handler Care Passport (bebas framework) | `apps/web/src/lib/api/carePassportHandler.ts` | ADA (teruji: `route.test.mjs`, `handler.test.mjs`) | Validasi body (bentuk `segments`: 1–12 segmen, ≤ 4000 karakter per segmen, ≤ 6000 total; bentuk lama `text` ≤ 4000), `ageBracket: '15-17'` → 403, gerbang krisis, deteksi PII server per segmen, mode `preview`/`generate`, `scrubWarning`, telemetri metadata |
 | Route HTTP Care Passport | `apps/web/src/app/api/care-passport/route.ts`, `.../preview/route.ts`, `apps/web/src/lib/api/carePassportRoute.ts` | ADA (tanpa test) | Body dibatasi 32 KB, rate limit per route (`care-passport` 10/menit, `care-passport-preview` 60/menit), mode `generate` memakai slot konkurensi chat bersama; **`result.warnings` diteruskan lewat `toPublicWarnings`** sebelum ke browser (kedua bentuk body); log `[CarePassport]` metadata saja |
 | F-A: bukti lokal | `apps/web/src/lib/carePassportClient.ts`, `apps/web/src/components/carePassport/EvidencePicker.tsx` | ADA (klien teruji: `carePassportClient.test.mjs`; komponen tanpa test) | Membaca jurnal/check-in dari localStorage **hanya untuk ditampilkan**; hanya entri yang dipilih pengguna yang dikirim; 30 hari terakhir; anggaran total dicek sebelum memilih |
@@ -75,8 +78,8 @@ Pembagian tanggung jawab redaksi: pipeline **menerima** teks/segmen tersanitasi 
 | F-B: handler dan route | `apps/web/src/lib/api/openingLinesHandler.ts` (teruji), `apps/web/src/app/api/care-passport/opening/route.ts` (tanpa test) | ADA | Passport dibangun ulang per bidang, kunci asing dibuang; tujuan tak dikenal / belum disetujui → 400; rate limit `care-passport-opening` 10/menit + slot chat; warning dipotong ke kepala tanpa titik dua ≤ 120 karakter |
 | Batas bersama | `apps/web/src/lib/carePassportLimits.ts` | ADA | `MAX_TEXT 4000`, `MIN_TEXT 20`, `MAX_SEGMENTS 12`, `MAX_TOTAL_TEXT 6000`, `MAX_CLARIFICATION_ROUNDS 3`, `EVIDENCE_WINDOW_DAYS 30` |
 | Halaman | `apps/web/src/app/care-passport/page.tsx` | ADA (tanpa test) | State mesin `consent → minor | intake → preview → loading → result | manual`; draf dan passport hanya di state komponen |
-| Komponen UI | `apps/web/src/components/carePassport/` (`ConsentStep`, `IntakeStep`, `EvidencePicker`, `RedactionPreview`, `ClarificationStep`, `PassportReview`, `OpeningLines`, `ExportActions`, `ImmediateHelp`, `ManualNote`, `ResultSkeleton`, `shared`) | ADA (tanpa test) | `ProvenanceTag` menampilkan "Diproses di AMD" hanya jika `isAmd: true`; `UrgentHelpLink` ke `/crisis` ada di tiap langkah |
-| Ekspor lokal | `apps/web/src/lib/carePassportExport.ts` (`buildCarePassportExport`) | ADA (teruji: suite "Care Passport local export" di `route.test.mjs`) | `.md`/`.txt`; `null` bila belum `user_approved`; **tanpa** `sourceQuote`, id provider, warning, atau `droppedClaims` |
+| Komponen UI | `apps/web/src/components/carePassport/` (`ConsentStep`, `IntakeStep`, `EvidencePicker`, `RedactionPreview`, `ClarificationStep`, `PassportReview`, `SelfHelpSteps`, `OpeningLines`, `ExportActions`, `ImmediateHelp`, `ManualNote`, `ResultSkeleton`, `shared`) | ADA (tanpa test) | `ProvenanceTag` menampilkan "Diproses di AMD" hanya jika `isAmd: true`; `UrgentHelpLink` ke `/crisis` ada di tiap langkah. **SCRUM-45:** `SelfHelpSteps` ("Langkah yang bisa dicoba") di `PassportReview` untuk READY dan HUMAN_SUPPORT: judul, 2–5 langkah dari KB dalam bahasa antarmuka, "Kenapa ini: '<kutipan>'", "Kapan perlu bantuan profesional", peringatan, sumber + lisensi + disclaimer adaptasi WHO, label "Panduan umum, bukan saran medis", tombol hapus 44 px, satu kolom (320 px); `SafetyPlanCards` statis di `ImmediateHelp` **di bawah** kontak darurat, berlabel "Bukan dari AI" |
+| Ekspor lokal | `apps/web/src/lib/carePassportExport.ts` (`buildCarePassportExport`) | ADA (teruji: suite "Care Passport local export" di `route.test.mjs`, `selfHelpExport.test.mjs`) | `.md`/`.txt`; `null` bila belum `user_approved`; **tanpa** `sourceQuote`, id provider, warning, atau `droppedClaims`. **SCRUM-45:** bagian "Langkah yang bisa dicoba" untuk kartu yang disimpan pengguna: teks KB, kutipan alasan, `seekHelpWhen`, peringatan, baris sumber + lisensi + URL, disclaimer adaptasi WHO, pengantar "bukan saran medis" |
 | Penyaring warning publik | `apps/web/src/lib/api/publicWarnings.ts` | ADA (teruji: `tests/security/publicWarnings.test.mjs`) | Dipakai `/api/chat` **dan** route Care Passport |
 | Endpoint AMD nyata | `.env.local` (`AMD_BASE_URL`, `AMD_MODEL`, …) | **RENCANA** (AMD-02) | Belum ada endpoint; semua test AI memakai tiruan |
 | `/support-options`, `/review-demo` | — | **RENCANA** (AMD-12) | Belum ada |
@@ -93,7 +96,8 @@ EvidenceRef   = { segmentId: string; kind; date? }
 EvidenceField = { value: string | null; source: 'user_input' | 'user_confirmed' | 'unknown'; sourceQuote?: string; needsReview: boolean; sourceRef?: EvidenceRef }
 CarePassport  = { version: 1; subject: 'anonymous_adult'; concerns; dailyImpact; duration; relevantContext;
                   questionsForProfessional: string[]; unknowns: string[]; disclaimer: string;
-                  reviewStatus: 'user_pending' | 'user_approved' }
+                  reviewStatus: 'user_pending' | 'user_approved';
+                  selfHelp?: { cardId: string; reasonQuote: string }[] }   // SCRUM-45, 0–3, id dari KB, kutipan berdasar
 CarePassportResult = { state; passport?; clarificationQuestion?; emergencyContacts?;
                        provenance: { providerId; isAmd; isFallback; latencyMs? }; droppedClaims: number; warnings: string[];
                        completeness?: { known: number; total: number; unknownLabels: string[] } }
@@ -123,16 +127,17 @@ Aturan yang ditegakkan validator (bukan sekadar diminta di prompt):
 - Batas: 8 butir per daftar evidence, 5 pertanyaan, 8 unknowns, panjang nilai 300 karakter; kelebihan dihitung sebagai `droppedClaims`.
 - `clarificationQuestion` maksimal satu; jika model tidak memberi dan `concerns` kosong, pipeline memakai `DEFAULT_CLARIFICATION_QUESTION`. Jalur lunak SCRUM-32 (§4) hanya memakai pertanyaan model yang lolos validator, tidak pernah pertanyaan bawaan. UI membatasi 3 putaran klarifikasi.
 - **Eskalasi berkutipan (SCRUM-44):** `humanSupportSuggested: true` adalah klaim tentang cerita pengguna, jadi diperlakukan seperti fakta lain: wajib `humanSupportQuote` yang merupakan kutipan persis teks tersanitasi (aturan `isGroundedQuote` yang sama). Tanpa itu nilainya `false` dan warning `ungrounded_escalation_dropped` dicatat; penanda deterministik `severity: 'high'` tidak terpengaruh dan tetap mengunci `HUMAN_SUPPORT_RECOMMENDED`. Trade-off dan jaring pengamannya: `docs/CAREBRIDGE_SAFETY_POLICY.md` §4.2.
+- **Kartu self-help (SCRUM-45):** `selfHelp` hanya memuat `{ cardId, reasonQuote }`; `cardId` harus ada di katalog dan bukan `safety_plan`, `reasonQuote` berdasar seperti `sourceQuote`, maks. 3, tanpa duplikat; model tidak pernah bisa menyisipkan teks langkah (kunci lain dibuang). Pembuangan hanya menambah warning `self_help_dropped`. Kebijakan: `docs/CAREBRIDGE_SAFETY_POLICY.md` §4.3.
 
 ## 4. Lima state hasil dan tampilannya
 
 | State | Kapan (sesuai kode) | `passport` | `provenance` | Komponen |
 |---|---|---|---|---|
-| `IMMEDIATE_HELP_SCREEN` | `crisis.isCrisis` atau `isUrgentHelpRequest(rawText)` pada semua segmen digabung; dicek sebelum consent dan sebelum preview | tidak ada | `none` / `isAmd:false` / `isFallback:true`; `emergencyContacts` terisi | `ImmediateHelp` (tel:, wa.me, situs) |
+| `IMMEDIATE_HELP_SCREEN` | `crisis.isCrisis` atau `isUrgentHelpRequest(rawText)` pada semua segmen digabung; dicek sebelum consent dan sebelum preview | tidak ada (jadi tidak ada `selfHelp`) | `none` / `isAmd:false` / `isFallback:true`; `emergencyContacts` terisi | `ImmediateHelp` (tel:, wa.me, situs) + `SafetyPlanCards` statis di bawah kontak (SCRUM-45, tanpa AI) |
 | `PROVIDER_UNAVAILABLE` | consent ditolak (`ai_consent_declined`), tidak ada provider (`no_provider_configured`), atau semua provider gagal/ditolak validator | tidak ada | `none` / `isFallback:true` | `ManualNote`; tombol coba lagi hanya bila consent diberikan |
 | `HUMAN_SUPPORT_RECOMMENDED` | draf diterima **dan** (`severity === 'high'` → warning `deterministic_high_distress`, **atau** `humanSupportSuggested: true` dari model **dengan `humanSupportQuote` yang berdasar** → `model_escalation`). `true` tanpa kutipan berdasar tidak mengubah state dan hanya meninggalkan warning `ungrounded_escalation_dropped` (SCRUM-44) | ada | provider yang menghasilkan draf | `PassportReview` |
 | `NEEDS_CLARIFICATION` | draf diterima dan tidak ada penanda eskalasi, lalu salah satu: **(a) aturan keras** `concerns` kosong setelah grounding (pertanyaan model, atau `DEFAULT_CLARIFICATION_QUESTION`), atau **(b) aturan lunak** (SCRUM-32), semua harus terpenuhi: `completeness.known <= 1` (hanya concern yang berdasar; `dailyImpact` dan `duration` kosong) **dan** pengguna sendiri menyatakan tidak tahu sebabnya (`isUnexplainedComplaint`: "entah kenapa", "nggak tahu kenapa", "tanpa sebab yang jelas", …; daftar frasa Indonesia, deterministik, pada teks tersanitasi) **dan** model memberi `clarificationQuestion` yang lolos validator **dan** belum ada segmen `clarification` (hanya ditanya sekali lewat jalur ini); warning `low_completeness_clarification`. Pipeline tidak pernah mengarang pertanyaan di jalur (b). Gerbang frasa diperlukan karena model nyata (deepseek-flash, 3/3 sampel) juga bertanya pada cerita spesifik seperti kasus D; tanpa gerbang itu D ikut jadi `NEEDS_CLARIFICATION` | ada (dengan unknowns; di jalur (b) juga ada ≥ 1 concern berdasar) | provider yang menghasilkan draf | `ClarificationStep`; jawaban menjadi segmen `clarification`, lalu seluruh segmen lewat preview dan redaksi lagi |
-| `READY_FOR_USER_REVIEW` | draf diterima, ada concern berdasar, tanpa penanda eskalasi | ada, `reviewStatus: 'user_pending'` | provider yang menghasilkan draf | `PassportReview` → `ExportActions` dan `OpeningLines` setelah Setujui |
+| `READY_FOR_USER_REVIEW` | draf diterima, ada concern berdasar, tanpa penanda eskalasi | ada, `reviewStatus: 'user_pending'`, `selfHelp?` bila model memilih kartu yang lolos validator | provider yang menghasilkan draf | `PassportReview` (+ `SelfHelpSteps` bila ada `selfHelp`; juga di `HUMAN_SUPPORT_RECOMMENDED`, bersama saran profesional) → `ExportActions` dan `OpeningLines` setelah Setujui |
 
 `isAmd` hanya `true` jika objek provider yang menghasilkan draf memiliki `isAmd === true` (hanya `createAmdProvider`). Provider lain yang dimasukkan pemanggil secara eksplisit dilaporkan `isAmd: false` dan UI menamainya "AI non-AMD: <id>". Pipeline **tidak** menambahkan DeepSeek/Gemini/OpenRouter secara diam-diam. Aturan yang sama berlaku untuk kalimat pembuka F-B (test `marks isAmd only when the accepted lines came from the AMD provider`).
 
@@ -186,6 +191,7 @@ Ditegakkan kode sekarang (baris bertanda † dibaca dari kode tanpa test):
 - Entri jurnal/check-in hanya dikirim bila dipilih; yang lain tetap di perangkat.
 - Draf dan passport hanya di state komponen React; refresh halaman menghapusnya. † Satu-satunya tulisan ke localStorage dari modul ini adalah baris **metrik angka** (`dengarin_care_passport_metrics`: stage, waktu, putaran, providerId, isAmd, latensi, jumlah segmen/bukti, droppedClaims, completeness), dibatasi jumlahnya dan ikut terhapus oleh wipe `/recovery`. Tidak ada teks.
 - Ekspor dibangun di browser, hanya setelah `user_approved`, tanpa kutipan sumber, id provider, warning, atau `droppedClaims`.
+- Teks kartu self-help (SCRUM-45) tidak pernah berasal dari model dan tidak pernah dikirim server: klien dan ekspor membacanya dari `@dengarin/config` berdasarkan `cardId`; yang melintas dari server hanya `cardId` dan `reasonQuote` (kalimat pengguna sendiri).
 - Pesan error adapter AMD tidak memuat API key.
 - Pada jalur krisis dan jalur tanpa consent, **tidak ada byte** yang dikirim ke provider mana pun (test `providerCalls: 0`, Care Passport maupun F-B).
 
@@ -209,6 +215,7 @@ Apa yang **tidak** dijanjikan: anonimitas total. `piiRedactor` deterministik dan
 | Prompt injection di dalam cerita atau entri | Prompt menandai segmen sebagai data; validator tetap membuang label diagnosis walau kutipannya ada di input (skenario S12, celah §4 rubrik sudah ditutup) | Pertahanan berlapis, bukan jaminan |
 | Krisis terlewat oleh aturan frasa (false negative) | Tidak ada mitigasi otomatis; model hanya bisa mengeskalasi via `humanSupportSuggested` (berkutipan), tidak bisa memicu `IMMEDIATE_HELP_SCREEN` | `UrgentHelpLink` ke `/crisis` tampil di setiap langkah. SCRUM-44 menambah rule ide pasif (`high`) dan frasa darurat Inggris ke gerbang deterministik |
 | `severity: 'high'` tanpa `isCrisis` | Draf tetap dibuat (bila consent), state dikunci `HUMAN_SUPPORT_RECOMMENDED` dengan warning `deterministic_high_distress` | Teruji; kebijakan final masih menunggu persetujuan Safety/QA (kebijakan §3) |
+| Model memilih kartu self-help yang tidak ada, kartu `safety_plan`, tanpa kutipan, atau menulis "langkah" sendiri (SCRUM-45) | Pilihan dibuang oleh `groundSelfHelp` dengan warning `self_help_dropped`; passport tetap tampil tanpa kartu itu; kunci selain `cardId`/`reasonQuote` tidak pernah dibaca | Relevansi kartu diukur runner dataset (`docs/CAREBRIDGE_DATASET.md` §12); kartu yang relevan secara topik belum tentu tepat untuk orang itu, dan pengguna bisa menghapusnya |
 | Model mengeskalasi berlebihan pada cerita ringan/sedang (SCRUM-44) | Prompt memuat kriteria positif/negatif eksplisit; `true` tanpa `humanSupportQuote` berdasar dibuang (`ungrounded_escalation_dropped`), passport tetap tampil | Baseline 14 Okt: moderate 10/19 (Gemma), 9/19 (DeepSeek); hasil sesudahnya di `docs/CAREBRIDGE_DATASET.md` §11. Trade-off: eskalasi model yang benar tetapi tanpa kutipan ikut dibuang; jaring pengaman tetap lapisan deterministik |
 | Tidak ada provider terkonfigurasi | `PROVIDER_UNAVAILABLE` dengan `no_provider_configured`; F-B → template | Kondisi repo saat ini |
 | Klien mengirim body besar / terlalu banyak entri / bracket usia aneh / span palsu | Body > 32 KB ditolak; > 12 segmen atau > 6000 karakter total atau > 4000 per segmen → 413; `15-17` → 403; span/id yang tidak cocok dengan temuan server diabaikan | Teruji (`handler.test.mjs`) |
@@ -220,21 +227,24 @@ Perintah: `npm run test:carebridge` di container `dengarin-testbench-bench` (Nod
 
 | File | Test | Lulus | Gagal |
 |---|---|---|---|
-| `tests/carebridge/carePassportValidator.test.mjs` (+6 SCRUM-44 grounded escalation) | 64 | 64 | 0 |
+| `tests/carebridge/carePassportValidator.test.mjs` (+6 SCRUM-44 grounded escalation, +9 SCRUM-45 self-help picks) | 73 | 73 | 0 |
 | `tests/carebridge/piiRedactor.test.mjs` | 37 | 37 | 0 |
 | `tests/carebridge/openingLines.test.mjs` (F-B) | 37 | 37 | 0 |
-| `tests/carebridge/pipeline.test.mjs` (+8 SCRUM-44: kutipan, jaring pengaman, ide pasif ID/EN, darurat EN) | 35 | 35 | 0 |
+| `tests/carebridge/pipeline.test.mjs` (+8 SCRUM-44: kutipan, jaring pengaman, ide pasif ID/EN, darurat EN; +6 SCRUM-45: kartu di READY/HUMAN, tidak ada di IMMEDIATE/UNAVAILABLE) | 41 | 41 | 0 |
 | `tests/carebridge/amdProvider.test.mjs` | 30 | 30 | 0 |
 | `tests/carebridge/route.test.mjs` | 23 | 23 | 0 |
-| `tests/carebridge/datasetSchema.test.mjs` (SCRUM-43) | 21 | 21 | 0 |
+| `tests/carebridge/datasetSchema.test.mjs` (SCRUM-43, +1 metrik self-help SCRUM-45) | 22 | 22 | 0 |
 | `tests/carebridge/handler.test.mjs` (F-A) | 18 | 18 | 0 |
-| `tests/carebridge/selfHelpCards.test.mjs` | 18 | 18 | 0 |
+| `tests/carebridge/selfHelpCards.test.mjs` (+5 accessor SCRUM-45) | 23 | 23 | 0 |
+| `tests/carebridge/selfHelpExport.test.mjs` (baru, SCRUM-45) | 7 | 7 | 0 |
 | `tests/carebridge/attribution.test.mjs` (F-A) | 14 | 14 | 0 |
-| `tests/carebridge/carePassportPrompt.test.mjs` (baru, SCRUM-44/47) | 13 | 13 | 0 |
+| `tests/carebridge/carePassportPrompt.test.mjs` (SCRUM-44/47, +3 SCRUM-45 katalog) | 16 | 16 | 0 |
 | `tests/carebridge/carePassportClient.test.mjs` (F-A) | 10 | 10 | 0 |
 | `tests/carebridge/evalMetrics.test.mjs` | 6 | 6 | 0 |
-| `tests/carebridge/datasetArtifacts.test.mjs` | 5 | 5 | 0 |
-| **Total** | **331** (65 suite) | **331** | **0** (0 todo, 0 skipped) |
+| `tests/carebridge/datasetArtifacts.test.mjs` (+1 sumber KB di packages/config) | 6 | 6 | 0 |
+| **Total** | **363** (70 suite) | **363** | **0** (0 todo, 0 skipped) |
+
+Run 15 Okt 2026 sebelum SCRUM-45: 331 test / 65 suite.
 
 Terkait di luar `test:carebridge` (run yang sama): `npm run test:crisis` 170 test (termasuk 21 kasus baru ide pasif/idiom di `crisisCoverageGaps.test.mjs`), `test:validator` 35, `test:orchestrator` 11, `test:security-m04` 5, `test:api` 34; semuanya lulus.
 

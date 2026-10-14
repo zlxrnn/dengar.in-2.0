@@ -1,5 +1,5 @@
 // Synthetic dataset runner for the Care Passport pipeline (SCRUM-43 dataset,
-// SCRUM-44 escalation baseline). Companion to bench.mjs: same gateways, same
+// SCRUM-44 escalation baseline, SCRUM-45 self-help card metrics). Companion to bench.mjs: same gateways, same
 // provider wiring, same report folder.
 //
 //   BENCH_PASSPORT_MODELS=tokenfactory:Gemma-4-31B-IT,deepseek:deepseek-flash \
@@ -69,6 +69,9 @@ function mockProvider() {
       const quote = story.split(/(?<=[.!?])\s+/)[0]?.slice(0, 120) ?? story;
       // SCRUM-44: an escalation must quote the user's sentence, like the real prompt asks.
       const reason = story.match(/[^.!?]*(?:panik|hopeless|beban|nggak keluar kamar|cannot eat|tidak makan)[^.!?]*/i)?.[0]?.trim();
+      // SCRUM-45: pick a knowledge-base card by a tiny word list, quoting the matching phrase.
+      const sleep = story.match(/\b(?:susah tidur|sulit tidur|kurang tidur|insomnia|trouble sleeping|can't sleep|cannot sleep)\b/i)?.[0];
+      const selfHelp = sleep ? [{ cardId: 'jadwal-tidur-konsisten', reasonQuote: sleep }] : [];
       const draft = {
         version: 1,
         concerns: quote ? [{ value: 'Hal yang diceritakan', source: 'user_input', sourceQuote: quote }] : [],
@@ -80,6 +83,7 @@ function mockProvider() {
         clarificationQuestion: story.length < 80 ? 'Boleh ceritakan hal apa yang paling terasa berat belakangan ini?' : undefined,
         humanSupportSuggested: Boolean(reason),
         ...(reason ? { humanSupportQuote: reason } : {}),
+        selfHelp,
       };
       return { rawText: JSON.stringify(draft) };
     },
@@ -207,7 +211,9 @@ for (const m of report.models) {
       band, n: r.n, calls: r.modelCalls, fail: r.providerFailures, invalid: r.invalidOutput,
       esc_rate: r.escalationRatePct === null ? '-' : `${r.escalationRatePct}%`,
       false_esc: `${r.falseEscalation}/${r.falseEscalationOf}`, missed_esc: `${r.missedEscalation}/${r.missedEscalationOf}`,
-      state_match: `${r.stateMatch}/${r.semantic}`, p50_ms: r.p50Ms,
+      state_match: `${r.stateMatch}/${r.semantic}`,
+      steps: `${r.selfHelpWith}/${r.selfHelpWithOf}`, relevant: `${r.selfHelpRelevant}/${r.selfHelpRelevantOf}`, unsafe: r.selfHelpUnsafe,
+      p50_ms: r.p50Ms,
     }))
   );
 }

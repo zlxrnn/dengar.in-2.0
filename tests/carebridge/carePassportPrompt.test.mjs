@@ -11,6 +11,7 @@ import {
   CARE_PASSPORT_INPUT_OPEN,
   CARE_PASSPORT_INPUT_CLOSE,
 } from '../../packages/prompts/src/carePassport.ts';
+import { SAFETY_PLAN_CARD_IDS, SELF_HELP_SELECTABLE_CARD_IDS, selfHelpCatalogForPrompt } from '../../packages/config/src/selfHelpCards.ts';
 
 const prompt = buildCarePassportSystemPrompt();
 const lower = prompt.toLowerCase();
@@ -105,12 +106,38 @@ describe('Care Passport prompt: extraction rules (SCRUM-47)', () => {
   });
 });
 
+describe('Care Passport prompt: self-help card picks (SCRUM-45)', () => {
+  it('declares selfHelp in the JSON shape as {cardId, reasonQuote} only', () => {
+    has('"selfHelp": [{ "cardId"');
+    has('"reasonQuote"');
+    assert.ok(!lower.includes('"steps"'), 'the model is never asked for step text');
+  });
+
+  it('asks for 0-3 cards tied to things the user actually said, with a short verbatim quote, and an empty list otherwise', () => {
+    has('0 sampai 3 kartu');
+    has('BENAR-BENAR disebut pengguna');
+    has('kutipan pendek persis');
+    has('jangan menulis isi langkahnya');
+    has('Jika tidak ada yang cocok: []');
+  });
+
+  it('appends the compact catalog: every selectable id once, no safety_plan card, no step text', () => {
+    const catalog = selfHelpCatalogForPrompt('id');
+    assert.ok(prompt.endsWith(catalog), 'catalog is the last block of the system prompt');
+    for (const id of SELF_HELP_SELECTABLE_CARD_IDS) assert.equal(prompt.split(`${id}:`).length, 2, `${id} exactly once`);
+    for (const id of SAFETY_PLAN_CARD_IDS) assert.ok(!prompt.includes(id), `${id} must not be offered`);
+    assert.ok(!prompt.includes('Sadari apa yang sedang kamu pikirkan'), 'no step text');
+  });
+});
+
 describe('Care Passport prompt: size budget (Gemma latency)', () => {
-  it('stays compact: under 5600 characters and no few-shot JSON examples beyond the shape', () => {
-    // Baseline (14 Oct) was 2703 chars; the SCRUM-44/47 criteria roughly double
-    // it (5513 on 15 Oct). Anything beyond this is prompt bloat that costs
-    // Gemma prefill time.
-    assert.ok(prompt.length < 5600, `prompt ${prompt.length} karakter`);
+  it('stays compact: under 9000 characters, catalog under 2800, no few-shot JSON examples beyond the shape', () => {
+    // Baseline (14 Oct) was 2703 chars; SCRUM-44/47 brought it to 5513; the
+    // SCRUM-45 selfHelp rule + 28-line catalog (titles and topics only, no
+    // steps) adds ~3100 (8637 on 15 Oct, ~2400 tokens). Anything beyond this
+    // is prompt bloat that costs Gemma prefill time.
+    assert.ok(prompt.length < 9000, `prompt ${prompt.length} karakter`);
+    assert.ok(selfHelpCatalogForPrompt('id').length < 2800, 'katalog terlalu panjang');
     // Exactly one JSON object (the shape) in the system prompt: no few-shot drafts.
     const objects = prompt.match(/"version":\s*1/g) ?? [];
     assert.equal(objects.length, 1);

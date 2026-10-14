@@ -5,7 +5,9 @@ import type {
   CarePassportSegmentKind,
   EvidenceField,
   EvidenceRef,
+  SelfHelpSuggestion,
 } from '@dengarin/types';
+import { SELF_HELP_MAX_CARDS, isSelectableSelfHelpCardId } from '@dengarin/config';
 import { containsUnsafeMedicalAdvice } from './actionValidator.ts';
 
 /**
@@ -65,6 +67,14 @@ export interface CarePassportDraftAccepted {
 
 /** Warning code: the model set `humanSupportSuggested: true` without a grounded quote. */
 export const UNGROUNDED_ESCALATION_WARNING = 'ungrounded_escalation_dropped';
+
+/**
+ * Warning code (SCRUM-45): at least one `selfHelp` pick was dropped (unknown
+ * or safety-plan card id, ungrounded `reasonQuote`, duplicate, or beyond the
+ * cap). Not counted in `droppedClaims`: a card pick is a suggestion, not a
+ * fact about the user.
+ */
+export const SELF_HELP_DROPPED_WARNING = 'self_help_dropped';
 
 export interface CarePassportDraftRejected {
   ok: false;
@@ -363,6 +373,50 @@ function groundHumanSupport(draft: Record<string, unknown>, sanitizedInput: stri
   return { suggested: false };
 }
 
+/**
+ * Self-help card picks (SCRUM-45). The model may only choose ids from the
+ * fixed catalog; anything else is noise, never content:
+ * - unknown ids and `safety_plan` ids are dropped (safety-plan cards are
+ *   static on the urgent-help screen and never an AI suggestion);
+ * - `reasonQuote` must be grounded exactly like a `sourceQuote`, so the pick
+ *   is tied to something the user actually said;
+ * - duplicates are collapsed and at most `SELF_HELP_MAX_CARDS` survive;
+ * - any extra keys (e.g. model-written "steps") are discarded: step text is
+ *   always rendered from the knowledge base.
+ * Drops are reported once as `self_help_dropped`, outside `droppedClaims`.
+ */
+function groundSelfHelp(raw: unknown, sanitizedInput: string, warnings: string[]): SelfHelpSuggestion[] {
+  if (raw === undefined || raw === null) return [];
+  const kept: SelfHelpSuggestion[] = [];
+  let dropped = false;
+  if (!Array.isArray(raw)) {
+    dropped = true;
+  } else {
+    for (const item of raw) {
+      if (!isRecord(item) || !isSelectableSelfHelpCardId(item.cardId)) {
+        dropped = true;
+        continue;
+      }
+      const quote = item.reasonQuote;
+      if (typeof quote !== 'string' || quote.length > MAX_VALUE_LENGTH || !isGroundedQuote(quote, sanitizedInput)) {
+        dropped = true;
+        continue;
+      }
+      if (kept.some((existing) => existing.cardId === item.cardId)) {
+        dropped = true;
+        continue;
+      }
+      if (kept.length >= SELF_HELP_MAX_CARDS) {
+        dropped = true;
+        continue;
+      }
+      kept.push({ cardId: item.cardId, reasonQuote: quote.trim() });
+    }
+  }
+  if (dropped) warnings.push(SELF_HELP_DROPPED_WARNING);
+  return kept;
+}
+
 export function validateCarePassportDraft(rawOutput: unknown, sanitizedInput: string): CarePassportDraftValidation {
   let draft: unknown = rawOutput;
   if (typeof rawOutput === 'string') {
@@ -432,6 +486,8 @@ export function validateCarePassportDraft(rawOutput: unknown, sanitizedInput: st
     }
   }
 
+  const selfHelp = groundSelfHelp(draft.selfHelp, sanitizedInput, warnings);
+
   const passport: CarePassport = {
     version: 1,
     subject: 'anonymous_adult',
@@ -443,6 +499,7 @@ export function validateCarePassportDraft(rawOutput: unknown, sanitizedInput: st
     unknowns: unknowns.slice(0, MAX_UNKNOWNS),
     disclaimer: CARE_PASSPORT_DISCLAIMER,
     reviewStatus: 'user_pending',
+    ...(selfHelp.length > 0 ? { selfHelp } : {}),
   };
 
   const humanSupport = groundHumanSupport(draft, sanitizedInput, warnings);

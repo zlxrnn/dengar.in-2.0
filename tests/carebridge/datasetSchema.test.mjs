@@ -14,6 +14,7 @@ import {
   TOPIC_VOCABULARY,
   aggregate,
   buildSample,
+  selfHelpMetrics,
   compareEscalation,
   escalationOf,
   parseJsonl,
@@ -253,6 +254,43 @@ describe('dataset runner metrics (scripts/testbench/datasetLib.mjs)', () => {
     assert.deepEqual(rows.all.falseEscalationIds, [mild.id]);
     assert.equal(rows.all.safety.providerNeverCalled, true);
     assert.equal(rows.all.p50Ms, 1200);
+  });
+
+  it('SCRUM-45: measures self-help picks per case (count, relevance, unsafe, dropped) without text', () => {
+    const sleepCase = cases.find((c) => c.band !== 'crisis' && c.band !== 'urgent_request' && c.expected.selfHelpTopics.includes('sleep'));
+    const crisis = cases.find((c) => c.band === 'crisis');
+    const passport = (selfHelp) => ({ version: 1, concerns: [], dailyImpact: [], duration: {}, relevantContext: [], questionsForProfessional: [], unknowns: [], selfHelp });
+
+    const relevant = selfHelpMetrics(sleepCase, { passport: passport([{ cardId: 'jadwal-tidur-konsisten', reasonQuote: 'x' }]) }, []);
+    assert.equal(relevant.count, 1);
+    assert.deepEqual(relevant.cardIds, ['jadwal-tidur-konsisten']);
+    assert.ok(relevant.topics.includes('sleep'));
+    assert.equal(relevant.relevant, true);
+    assert.equal(relevant.unsafe, false);
+    assert.equal(relevant.dropped, false);
+
+    const offTopic = sleepCase.expected.selfHelpTopics.includes('money') ? 'khawatir-soal-tubuh-dan-kesehatan' : 'masalah-uang-enam-langkah';
+    const irrelevant = selfHelpMetrics(sleepCase, { passport: passport([{ cardId: offTopic, reasonQuote: 'x' }]) }, ['self_help_dropped']);
+    assert.equal(irrelevant.relevant, sleepCase.expected.selfHelpTopics.some((t) => ['money', 'worry', 'health_worry'].includes(t)));
+    assert.equal(irrelevant.dropped, true);
+
+    const none = selfHelpMetrics(sleepCase, { passport: passport(undefined) }, []);
+    assert.equal(none.count, 0);
+    assert.equal(none.relevant, null);
+
+    // Crisis cases never reach AI; a pick there would be unsafe (and impossible without a passport).
+    assert.equal(selfHelpMetrics(crisis, { state: 'IMMEDIATE_HELP_SCREEN' }, []).unsafe, false);
+    assert.equal(selfHelpMetrics(crisis, { passport: passport([{ cardId: 'jadwal-tidur-konsisten', reasonQuote: 'x' }]) }, []).unsafe, true);
+
+    const sample = buildSample(sleepCase, { state: 'READY_FOR_USER_REVIEW', warnings: [], passport: passport([{ cardId: 'jadwal-tidur-konsisten', reasonQuote: 'rahasia' }]), provenance: { latencyMs: 10 } }, { calls: 1, errors: [] });
+    assert.equal(sample.selfHelp.count, 1);
+    assert.ok(!JSON.stringify(sample).includes('rahasia'), 'reason quotes never enter the metadata row');
+    const rows = aggregate([sample]);
+    assert.equal(rows.all.selfHelpWith, 1);
+    assert.equal(rows.all.selfHelpWithOf, 1);
+    assert.equal(rows.all.selfHelpRelevant, 1);
+    assert.equal(rows.all.selfHelpUnsafe, 0);
+    assert.equal(rows.all.selfHelpByTopic.sleep, 1);
   });
 
   it('never stores input text or secrets in a sample', () => {

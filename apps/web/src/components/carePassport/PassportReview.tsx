@@ -10,6 +10,7 @@ import { useLanguage } from '@/i18n';
 import { EXPORT_SECTION_LABELS, exportSectionLabels } from '@/lib/carePassportExport';
 import { ExportActions } from './ExportActions';
 import { OpeningLines, openingLinesExportText, type OpeningLinesSelection } from './OpeningLines';
+import { SelfHelpSteps } from './SelfHelpSteps';
 import { MUTED, ProvenanceTag, SectionCard, SourceChip, StepHeading, Tag, UrgentHelpLink, isParaphrase, provenanceLabel, sourceLabel, usePassportText } from './shared';
 
 type ListSection = 'concerns' | 'dailyImpact' | 'relevantContext';
@@ -93,6 +94,13 @@ export function PassportReview({ result, passport: initial, onRestart, onApprove
 
   const setQuestions = (questions: string[]) => update((p) => ({ ...p, questionsForProfessional: questions }));
   const dismissUnknown = (label: string) => update((p) => clearUnknown(p, label));
+  // SCRUM-45: a removed card leaves the draft, so it is neither shown nor exported.
+  const removeSelfHelp = (cardId: string) =>
+    update((p) => {
+      const rest = (p.selfHelp ?? []).filter((s) => s.cardId !== cardId);
+      const { selfHelp: _dropped, ...withoutSelfHelp } = p;
+      return rest.length > 0 ? { ...withoutSelfHelp, selfHelp: rest } : withoutSelfHelp;
+    });
   const approve = () => {
     setDraft((p) => ({ ...p, reviewStatus: 'user_approved' }));
     onApprove?.();
@@ -144,6 +152,8 @@ export function PassportReview({ result, passport: initial, onRestart, onApprove
           <DurationCard field={draft.duration} locked={approved} {...durationHandlers} />
           <ListCard title={labels.relevantContext} items={draft.relevantContext} locked={approved} {...listHandlers('relevantContext')} />
           <QuestionsCard questions={draft.questionsForProfessional} locked={approved} onChange={setQuestions} />
+          {/* SCRUM-45: knowledge-base steps the model picked; shown in READY and HUMAN_SUPPORT alike */}
+          {draft.selfHelp && draft.selfHelp.length > 0 && <SelfHelpSteps items={draft.selfHelp} onRemove={approved ? undefined : removeSelfHelp} />}
         </div>
 
         <div className="lg:col-span-4 space-y-6 animate-reveal-up [animation-delay:220ms]">

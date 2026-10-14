@@ -426,6 +426,19 @@ export interface CarePassportCompleteness {
 
 export type CarePassportReviewStatus = 'user_pending' | 'user_approved';
 
+/**
+ * SCRUM-45 "Langkah yang bisa dicoba": a self-help card the model PICKED from
+ * the fixed knowledge base (`@dengarin/config` selfHelpCards), never wrote.
+ * `cardId` is validated against the catalog (safety-plan cards are refused)
+ * and `reasonQuote` must be a verbatim quote from the sanitized input, like
+ * every other grounded field. The step text is looked up from the knowledge
+ * base at render/export time and is general self-help, not medical advice.
+ */
+export interface SelfHelpSuggestion {
+  cardId: string;
+  reasonQuote: string;
+}
+
 export interface CarePassport {
   version: 1;
   subject: 'anonymous_adult';
@@ -438,6 +451,13 @@ export interface CarePassport {
   unknowns: string[];
   disclaimer: string;
   reviewStatus: CarePassportReviewStatus;
+  /**
+   * Optional (SCRUM-45, backward compatible): 0–3 validated self-help card
+   * picks. Absent on crisis / no-AI paths because no passport exists there.
+   * The user may remove items in the review UI; the export only carries what
+   * remains.
+   */
+  selfHelp?: SelfHelpSuggestion[];
 }
 
 export type CarePassportResultState =

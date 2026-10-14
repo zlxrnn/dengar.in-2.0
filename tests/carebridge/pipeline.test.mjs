@@ -313,6 +313,123 @@ describe('Care Passport pipeline: escalation only', () => {
   });
 });
 
+describe('Care Passport pipeline: self-help steps (SCRUM-45)', () => {
+  const SLEEP_WORK = 'Beberapa minggu ini aku susah tidur dan gampang panik kalau mikirin kerjaan. Aku masih masuk kantor tiap hari.';
+  const SLEEP_DRAFT = {
+    version: 1,
+    concerns: [{ value: 'Susah tidur', source: 'user_input', sourceQuote: 'susah tidur' }],
+    dailyImpact: [{ value: 'Gampang panik soal kerjaan', source: 'user_input', sourceQuote: 'gampang panik kalau mikirin kerjaan' }],
+    duration: { value: 'beberapa minggu ini', source: 'user_input', sourceQuote: 'Beberapa minggu ini' },
+    relevantContext: [],
+    questionsForProfessional: ['Apa yang bisa saya coba saat susah tidur?'],
+    unknowns: [],
+    selfHelp: [
+      { cardId: 'jadwal-tidur-konsisten', reasonQuote: 'susah tidur' },
+      { cardId: 'napas-lambat-tiga-hitungan', reasonQuote: 'gampang panik' },
+    ],
+  };
+
+  it('READY_FOR_USER_REVIEW carries the validated picks on the passport', async () => {
+    const provider = mockProvider('amd:test', returns(SLEEP_DRAFT), { isAmd: true });
+    const result = await runCarePassportPipeline(
+      { rawText: SLEEP_WORK, sanitizedText: SLEEP_WORK, aiConsent: true },
+      { providers: [provider] }
+    );
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.deepEqual(result.passport.selfHelp, SLEEP_DRAFT.selfHelp);
+    assert.equal(result.droppedClaims, 0);
+  });
+
+  it('HUMAN_SUPPORT_RECOMMENDED keeps the picks too (steps alongside, not instead of, the professional suggestion)', async () => {
+    const deterministic = 'Aku udah nggak kuat lagi. Susah tidur, tiap hari nangis, nggak bisa kerja.';
+    const provider = mockProvider('amd:test', returns({
+      concerns: [{ value: 'Susah tidur', source: 'user_input', sourceQuote: 'Susah tidur' }],
+      humanSupportSuggested: false,
+      selfHelp: [{ cardId: 'jadwal-tidur-konsisten', reasonQuote: 'Susah tidur' }],
+    }), { isAmd: true });
+    const result = await runCarePassportPipeline(
+      { rawText: deterministic, sanitizedText: deterministic, aiConsent: true },
+      { providers: [provider] }
+    );
+    assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED');
+    assert.ok(result.warnings.includes('deterministic_high_distress'));
+    assert.deepEqual(result.passport.selfHelp, [{ cardId: 'jadwal-tidur-konsisten', reasonQuote: 'Susah tidur' }]);
+
+    const modelEsc = mockProvider('amd:test', returns({
+      ...SLEEP_DRAFT,
+      humanSupportSuggested: true,
+      humanSupportQuote: 'gampang panik kalau mikirin kerjaan',
+    }), { isAmd: true });
+    const escalated = await runCarePassportPipeline(
+      { rawText: SLEEP_WORK, sanitizedText: SLEEP_WORK, aiConsent: true },
+      { providers: [modelEsc] }
+    );
+    assert.equal(escalated.state, 'HUMAN_SUPPORT_RECOMMENDED');
+    assert.equal(escalated.passport.selfHelp.length, 2);
+  });
+
+  it('IMMEDIATE_HELP_SCREEN never has steps: no passport, no model call, even when the mock would pick cards', async () => {
+    const provider = mockProvider('amd:test', returns(SLEEP_DRAFT), { isAmd: true });
+    for (const text of ['Aku susah tidur dan rasanya pengen mati aja.', 'Susah tidur. Tolong, aku butuh bantuan darurat sekarang.']) {
+      const result = await runCarePassportPipeline(
+        { rawText: text, sanitizedText: text, aiConsent: true },
+        { providers: [provider] }
+      );
+      assert.equal(result.state, 'IMMEDIATE_HELP_SCREEN', text);
+      assert.equal(result.passport, undefined);
+      assert.equal(provider.calls.length, 0);
+      assert.ok(!JSON.stringify(result).includes('cardId'));
+    }
+  });
+
+  it('PROVIDER_UNAVAILABLE (consent declined or provider failed) never has steps', async () => {
+    const declined = await runCarePassportPipeline(
+      { rawText: SLEEP_WORK, sanitizedText: SLEEP_WORK, aiConsent: false },
+      { providers: [mockProvider('amd:test', returns(SLEEP_DRAFT), { isAmd: true })] }
+    );
+    assert.equal(declined.state, 'PROVIDER_UNAVAILABLE');
+    assert.equal(declined.passport, undefined);
+
+    const failing = mockProvider('amd:down', async () => { throw new Error('AMD endpoint tidak merespons'); }, { isAmd: true });
+    const failed = await runCarePassportPipeline(
+      { rawText: SLEEP_WORK, sanitizedText: SLEEP_WORK, aiConsent: true },
+      { providers: [failing] }
+    );
+    assert.equal(failed.state, 'PROVIDER_UNAVAILABLE');
+    assert.equal(failed.passport, undefined);
+    assert.ok(!JSON.stringify(failed).includes('cardId'));
+  });
+
+  it('invalid picks are removed with self_help_dropped and the passport is still returned', async () => {
+    const provider = mockProvider('amd:test', returns({
+      ...SLEEP_DRAFT,
+      selfHelp: [
+        { cardId: 'rencana-keselamatan-enam-langkah', reasonQuote: 'susah tidur' },
+        { cardId: 'jadwal-tidur-konsisten', reasonQuote: 'tidak pernah diucapkan' },
+        { cardId: 'napas-lambat-tiga-hitungan', reasonQuote: 'gampang panik' },
+      ],
+    }), { isAmd: true });
+    const result = await runCarePassportPipeline(
+      { rawText: SLEEP_WORK, sanitizedText: SLEEP_WORK, aiConsent: true },
+      { providers: [provider] }
+    );
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.deepEqual(result.passport.selfHelp, [{ cardId: 'napas-lambat-tiga-hitungan', reasonQuote: 'gampang panik' }]);
+    assert.ok(result.warnings.includes('self_help_dropped'));
+    assert.equal(result.droppedClaims, 0);
+  });
+
+  it('the system prompt offers the catalog and asks for card ids, never step text', async () => {
+    const provider = mockProvider('amd:test', returns(SLEEP_DRAFT), { isAmd: true });
+    await runCarePassportPipeline({ rawText: SLEEP_WORK, sanitizedText: SLEEP_WORK, aiConsent: true }, { providers: [provider] });
+    const system = provider.calls[0].systemPrompt;
+    assert.ok(system.includes('KATALOG KARTU'));
+    assert.ok(system.includes('jadwal-tidur-konsisten: '));
+    assert.ok(!system.includes('rencana-keselamatan-enam-langkah'));
+    assert.ok(!system.includes('Perlambat: tekan kedua telapak kaki ke lantai'), 'no step text in the prompt');
+  });
+});
+
 describe('Care Passport pipeline: soft clarification when only the concern is known (SCRUM-32)', () => {
   const golden = (id) => GOLDEN_CASES.find((c) => c.id === id);
   const run = (text, draft, extra = {}) =>

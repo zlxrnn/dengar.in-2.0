@@ -4,9 +4,14 @@ import React from 'react';
 import Link from 'next/link';
 import { PhoneCall, MessageCircle, ExternalLink, ShieldAlert } from 'lucide-react';
 import type { EmergencyContact } from '@dengarin/types';
+import { SAFETY_PLAN_CARD_IDS, getSelfHelpCard, type SelfHelpCard } from '@dengarin/config';
 import { Button } from '@/components/ui';
 import { contactText, useLanguage } from '@/i18n';
+import { SafetyPlanCards } from './SelfHelpSteps';
 import { usePassportText } from './shared';
+
+/** The two static `safety_plan` cards, resolved once at module load (no AI, no network). */
+const SAFETY_PLAN_CARDS: SelfHelpCard[] = SAFETY_PLAN_CARD_IDS.map((id) => getSelfHelpCard(id)).filter((card): card is SelfHelpCard => card !== undefined);
 
 // "119 ext 8" dials as "119,8" (pause, then the extension), audit L4.
 function dialable(phone?: string): string {
@@ -26,6 +31,8 @@ export interface ImmediateHelpProps {
  * this renders synchronously with real contacts from the crisis engine.
  * Numbers come from the engine unchanged; only names/descriptions follow the
  * interface language (contactText), falling back to the engine's Indonesian.
+ * SCRUM-45: a static safety plan (two knowledge-base cards) sits BELOW the
+ * contacts; the contacts always come first and are unchanged.
  */
 export function ImmediateHelp({ contacts, onRestart }: ImmediateHelpProps) {
   const t = usePassportText().immediate;
@@ -135,6 +142,8 @@ export function ImmediateHelp({ contacts, onRestart }: ImmediateHelpProps) {
           </ul>
         </div>
       )}
+
+      <SafetyPlanCards cards={SAFETY_PLAN_CARDS} />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-[#D8D3C9] pt-5">
         <Link href="/crisis" className="inline-flex items-center min-h-[44px] text-base font-bold text-[#151515] underline underline-offset-4 decoration-2 hover:text-[#B3261E] rounded focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE]">

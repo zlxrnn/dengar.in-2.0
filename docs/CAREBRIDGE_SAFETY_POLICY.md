@@ -2,7 +2,7 @@
 
 Task: AMD-05. Implementasi: `services/orchestrator/src/carePassportPipeline.ts`. Test: `tests/carebridge/pipeline.test.mjs`.
 
-**Status:** draf teknis. Penanganan *high distress* (§3) adalah **usulan yang menunggu persetujuan Safety/QA**. Kriteria eskalasi model dan eskalasi berkutipan di §4, frasa darurat bahasa Inggris di §2, serta rule ide pasif di §3 adalah rekomendasi SCRUM-44 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026).
+**Status:** draf teknis. Penanganan *high distress* (§3) adalah **usulan yang menunggu persetujuan Safety/QA**. Kriteria eskalasi model dan eskalasi berkutipan di §4, frasa darurat bahasa Inggris di §2, serta rule ide pasif di §3 adalah rekomendasi SCRUM-44 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026). Langkah self-help berbasis kartu dan rencana keselamatan statis di §4.3 adalah fitur SCRUM-45 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026).
 
 ## 1. Urutan wajib
 
@@ -54,6 +54,21 @@ Baseline 14 Okt 2026 (`docs/CAREBRIDGE_DATASET.md` §8) menunjukkan kedua model 
 - **Trade-off yang disadari:** aturan ini bisa membuang eskalasi model yang benar tetapi dikutip buruk. Jaring pengamannya adalah lapisan deterministik, bukan validator: teks yang dikenal engine selalu terkunci. Yang tersisa terbuka adalah teks yang **tidak** dikenal engine **dan** dieskalasi model tanpa kutipan; celah itu diukur sebagai `missed_esc` pada dataset sintetis dan **harus tetap 0** (`docs/CAREBRIDGE_DATASET.md` §11). Setiap kasus nyata yang terlewat harus ditambahkan ke rule engine (jalur deterministik), bukan ditambal dengan melonggarkan validator.
 - Test: `tests/carebridge/carePassportValidator.test.mjs` (suite "grounded escalation"), `tests/carebridge/pipeline.test.mjs` (suite "escalation only"), `tests/carebridge/carePassportPrompt.test.mjs`.
 
+### 4.3 Langkah self-help berbasis kartu dan rencana keselamatan statis (SCRUM-45; disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026)
+
+Care Passport kini bisa membawa bagian **"Langkah yang bisa dicoba"**: 0 sampai 3 kartu dari basis pengetahuan self-help (`packages/config/src/selfHelpCards.v1.json`, 30 kartu SCRUM-46, `docs/CAREBRIDGE_KNOWLEDGE_BASE.md`). Aturan yang ditegakkan kode, bukan hanya diminta di prompt:
+
+1. **Model hanya memilih id, tidak pernah menulis isi.** Prompt (`packages/prompts/src/carePassport.ts`, aturan 14) memuat katalog ringkas `id: judul — topik` (28 kartu, tanpa langkah) dan meminta `selfHelp: [{ cardId, reasonQuote }]`. Teks langkah, "kapan perlu bantuan profesional", peringatan, dan sumber selalu dirender dari basis pengetahuan dalam bahasa antarmuka. Kunci lain yang dikirim model (misalnya `steps`) dibuang.
+2. **Setiap pilihan harus berkutipan.** `reasonQuote` wajib kutipan persis teks tersanitasi (aturan `isGroundedQuote` yang sama dengan `sourceQuote` dan `humanSupportQuote`). Pilihan tanpa kutipan berdasar dibuang.
+3. **Kartu `safety_plan` tidak pernah bisa dipilih model.** Validator (`services/validator/src/carePassport.ts`, `groundSelfHelp`) hanya menerima id dari `SELF_HELP_SELECTABLE_CARD_IDS`; id tidak dikenal dan id `safety_plan` dibuang. Maksimal 3, duplikat digabung. Setiap pembuangan dicatat sebagai warning `self_help_dropped` (kode saja), **tidak** dihitung sebagai `droppedClaims` karena pilihan kartu adalah saran, bukan fakta tentang pengguna.
+4. **Urutan keselamatan tidak berubah.** Kartu hanya ada bila ada passport, sehingga otomatis **tidak ada** di `IMMEDIATE_HELP_SCREEN` (AI tidak dipanggil, tidak ada passport) dan `PROVIDER_UNAVAILABLE`. Di `HUMAN_SUPPORT_RECOMMENDED` kartu tampil **bersama**, bukan menggantikan, saran berbicara dengan profesional. Pengguna bisa menghapus kartu di layar tinjau; yang dihapus tidak masuk ekspor.
+5. **Label dan lisensi.** UI dan ekspor selalu memuat label "panduan umum, bukan saran medis, bukan pengganti bertemu profesional", kalimat `seekHelpWhen` kartu, baris sumber + lisensi, dan untuk materi WHO (CC BY-NC-SA 3.0 IGO) disclaimer adaptasi ("Diadaptasi oleh Dengar.in; penerbit asli tidak membuat dan tidak bertanggung jawab atas adaptasi ini").
+6. **Rencana keselamatan statis di layar bantuan segera.** `ImmediateHelp.tsx` menampilkan dua kartu `safety_plan` **di bawah** kontak darurat (kontak tetap pertama dan tidak berubah), sebagai teks tetap berlabel "Bukan dari AI", tanpa panggilan AI dan tanpa jaringan. Struktur enam langkah Stanley & Brown hanya dideskripsikan; formulir asli tidak direproduksi.
+7. **Pengukuran.** `scripts/testbench/dataset.mjs` mencatat per band: kasus dengan ≥ 1 kartu, relevansi (topik kartu ∩ `expected.selfHelpTopics` ≠ ∅), `unsafe` (kartu pada kasus crisis/urgent; **harus 0**, kasus itu tidak pernah sampai AI), dan `self_help_dropped`. Target: relevansi ≥ 80 % pada band mild/moderate yang punya kartu, unsafe 0, metrik eskalasi tidak memburuk, p50 latensi ≤ +15 % dari hasil SCRUM-44. Hasil: `docs/CAREBRIDGE_DATASET.md` §12.
+8. Test: `carePassportValidator.test.mjs` (suite "self-help card picks"), `pipeline.test.mjs` (suite "self-help steps"), `carePassportPrompt.test.mjs` (suite "self-help card picks"), `selfHelpCards.test.mjs` (accessor), `selfHelpExport.test.mjs`, `datasetSchema.test.mjs` (metrik).
+
+Yang **tidak** dijanjikan: kartu bukan intervensi klinis dan tidak dipersonalisasi di luar pilihan id; isi kartu dan daftar sumbernya tetap tunduk pada proses review `docs/CAREBRIDGE_KNOWLEDGE_BASE.md` §6, dan setiap perubahan isi kartu wajib approval Safety Owner.
+
 ## 5. Persetujuan AI ditolak
 
 - Tidak ada panggilan AI. State: `PROVIDER_UNAVAILABLE`, `provenance.isFallback = true`, peringatan `ai_consent_declined`.
@@ -76,5 +91,6 @@ Baseline 14 Okt 2026 (`docs/CAREBRIDGE_DATASET.md` §8) menunjukkan kedua model 
 - Deteksi krisis berbasis aturan frasa bahasa Indonesia dan Inggris. Deteksi ini **tidak sempurna**: ada frasa yang terlewat (false negative) dan ada yang terpicu keliru (false positive). Setiap kasus yang terlewat harus diinvestigasi dan ditambahkan ke regresi. Asimetri idiom yang disengaja untuk saat ini: "mau mati aja kalau presentasi" (ID) → `crisis`, "rather die than present" (EN) → tidak ditandai; keduanya dikunci test (`docs/CRISIS_CLASSIFICATION.md`).
 - Eskalasi model yang dibuang karena tanpa kutipan (§4.2) adalah trade-off yang disadari; angka `ungrounded_escalation_dropped` dan `missed_esc` pada dataset harus dipantau tiap kali prompt atau model berubah.
 - Tombol "Butuh bantuan sekarang?" harus selalu tersedia di UI, terlepas dari klasifikasi apa pun.
+- Relevansi kartu self-help (§4.3) bergantung pada pilihan model dan diukur hanya pada dataset sintetis dengan kosakata topik tetap; kartu yang relevan secara topik belum tentu tepat untuk orang itu. Kartu tidak pernah menggantikan jalur bantuan manusia, dan status non-komersial aplikasi (syarat CC BY-NC-SA) perlu dikonfirmasi tim produk.
 - Lulus test dengan provider tiruan bukan bukti keamanan produksi. Evaluasi menyeluruh ada di AMD-13.
 - Kontak darurat berasal dari crisis engine. Akurasinya (misalnya label 24 jam Sejiwa) perlu diverifikasi ulang sebelum demo, sesuai catatan di plan §5D.

@@ -1,7 +1,7 @@
-# Basis Pengetahuan Self-Help CareBridge (SCRUM-46)
+# Basis Pengetahuan Self-Help CareBridge (SCRUM-46, dipakai runtime sejak SCRUM-45)
 
-**Status:** draf, **menunggu review Safety/QA** (Safety Owner: Immanuel). Belum dipakai oleh pipeline mana pun.
-**Data:** `tests/carebridge/dataset/self_help_cards.v1.json` (30 kartu, 16 topik). **Test:** `tests/carebridge/selfHelpCards.test.mjs`.
+**Status:** **dipakai di runtime** sejak SCRUM-45 (disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026): kartu dipilih model lewat id dan ditampilkan di Care Passport serta layar bantuan segera (`docs/CAREBRIDGE_SAFETY_POLICY.md` §4.3). Isi kartu dan tabel sumber §3 tetap tunduk pada review Safety Owner (Immanuel) sesuai §6.
+**Data:** `packages/config/src/selfHelpCards.v1.json` (30 kartu, 16 topik; dipindah dari `tests/carebridge/dataset/` agar bisa di-import aplikasi dan services). **Accessor bertipe:** `packages/config/src/selfHelpCards.ts` (`SELF_HELP_CARDS`, `SELF_HELP_CARD_IDS`, `SELF_HELP_SELECTABLE_CARD_IDS`, `SAFETY_PLAN_CARD_IDS`, `getSelfHelpCard(id)`, `isSelectableSelfHelpCardId(id)`, `selfHelpCatalogForPrompt(lang)`, `selfHelpAttribution(card)`, `selfHelpLicenseLabel(card, lang)`). **Artefak:** `tests/carebridge/dataset/self_help_cards.v1.pb.zst` + `manifest.json` (`npm run dataset:build`). **Test:** `tests/carebridge/selfHelpCards.test.mjs`.
 **Tanggal riset sumber:** 15 Oktober 2026.
 
 ## 1. Tujuan
@@ -23,12 +23,22 @@ Prinsip isi, selaras dengan `docs/CAREBRIDGE_SAFETY_POLICY.md` dan `docs/AI_POLI
 
 ## 2. Cara kartu dipakai
 
-- **Sekarang:** hanya sebagai dataset yang divalidasi test (`npm run test:carebridge` ikut menjalankan `selfHelpCards.test.mjs`).
-  Agen/tim lain membangun dataset evaluasi terhadap kosakata topik yang sama.
-- **Rencana (SCRUM-45, belum dibuat):** kartu dipilih secara **deterministik** berdasarkan topik yang sudah tervalidasi dari
-  Care Passport, lalu ditampilkan sebagai saran "langkah kecil" di layar hasil, **setelah** gerbang krisis. Model AI tidak
-  menulis ulang isi kartu; model paling banyak memilih id kartu dari daftar tetap, dan pilihannya tetap divalidasi.
-- Kartu `safety_plan` hanya untuk layar bantuan segera / konteks yang sudah didampingi profesional; bukan latihan mandiri biasa.
+- **Prompt** (`packages/prompts/src/carePassport.ts`, aturan 14): system prompt memuat katalog ringkas dari `selfHelpCatalogForPrompt('id')`,
+  satu baris per kartu yang boleh dipilih (`id: judul — topik`; 28 baris, ~2,5 ribu karakter, tanpa langkah). Model mengembalikan
+  `selfHelp: [{ cardId, reasonQuote }]`, 0–3 butir, hanya untuk hal yang benar-benar disebut pengguna, dengan kutipan persis.
+- **Validator** (`services/validator/src/carePassport.ts`, `groundSelfHelp`): hanya id dari `SELF_HELP_SELECTABLE_CARD_IDS`
+  (kartu `safety_plan` ditolak), `reasonQuote` harus berdasar seperti `sourceQuote`, maks. 3, duplikat digabung, kunci lain
+  (misalnya `steps` buatan model) dibuang; pembuangan dicatat sebagai warning `self_help_dropped`, bukan `droppedClaims`.
+- **UI** (`apps/web/src/components/carePassport/SelfHelpSteps.tsx` di `PassportReview`): judul, 2–5 langkah, "Kenapa ini: '<kutipan>'",
+  "Kapan perlu bantuan profesional" (`seekHelpWhen`), peringatan, baris sumber + lisensi, dan disclaimer adaptasi untuk kartu WHO;
+  label "Panduan umum", bukan saran medis. Tampil di `READY_FOR_USER_REVIEW` dan `HUMAN_SUPPORT_RECOMMENDED` (bersama saran profesional),
+  tidak pernah di `IMMEDIATE_HELP_SCREEN` atau `PROVIDER_UNAVAILABLE`. Pengguna bisa menghapus kartu; yang dihapus tidak diekspor.
+- **Ekspor** (`apps/web/src/lib/carePassportExport.ts`): bagian "Langkah yang bisa dicoba" dengan teks kartu dari basis pengetahuan,
+  kutipan alasan, baris sumber/lisensi/URL, dan disclaimer adaptasi; tetap hanya setelah `user_approved` dan atas tindakan pengguna.
+- **Kartu `safety_plan`** (2) hanya dirender statis di layar bantuan segera (`ImmediateHelp.tsx`, komponen `SafetyPlanCards`) **di bawah**
+  kontak darurat, berlabel "Bukan dari AI", tanpa panggilan AI dan tanpa jaringan. Tidak pernah bisa dipilih model.
+- **Evaluasi:** `scripts/testbench/dataset.mjs` mengukur kasus dengan ≥ 1 kartu, relevansi terhadap `expected.selfHelpTopics`, `unsafe`
+  (harus 0), dan `self_help_dropped` per band (`docs/CAREBRIDGE_DATASET.md` §7 dan §12).
 - Kosakata topik tetap (jangan diubah tanpa menyinkronkan dengan dataset evaluasi): `stress, sleep, worry, low_mood,
   overload_study, overload_work, money, loneliness, grief, relationship_conflict, family_conflict, grounding, health_worry,
   self_criticism, burnout, safety_plan`.
@@ -59,8 +69,9 @@ Semua URL dan lisensi diverifikasi 15 Okt 2026. Untuk publikasi WHO, halaman hak
 
 Catatan lisensi CC BY-NC-SA 3.0 IGO: parafrase/adaptasi diperbolehkan untuk tujuan non-komersial dengan atribusi dan lisensi
 turunan yang setara; adaptasi harus memuat disclaimer bahwa WHO tidak membuat dan tidak bertanggung jawab atas adaptasi tersebut.
-Kalau Dengar.in menampilkan kartu ini ke pengguna (SCRUM-45), **disclaimer adaptasi WHO dan atribusi CDC/Kemenkes wajib muncul**
-di UI atau halaman sumber. Status non-komersial aplikasi perlu dikonfirmasi tim produk.
+Sejak SCRUM-45 kartu ditampilkan ke pengguna: **disclaimer adaptasi WHO dan atribusi CDC/Kemenkes muncul** di setiap kartu (UI dan
+ekspor) lewat `selfHelpAttribution` (`adapted: true` untuk CC BY-NC-SA) dan `selfHelpLicenseLabel`. Status non-komersial aplikasi tetap
+perlu dikonfirmasi tim produk.
 
 ## 4. Jumlah kartu per topik
 
@@ -81,8 +92,9 @@ relationship_conflict 2 · family_conflict 2 · grounding 2 · health_worry 1 ·
 
 ## 6. Proses pembaruan
 
-1. Tambah/ubah kartu hanya lewat PR dengan key Jira; pemilik wilayah `tests/carebridge/` adalah pemilik fitur CareBridge (YanIanZ),
-   dan setiap perubahan isi kartu wajib approval Safety Owner (aturan `COLLABORATION_RULES.md` §1.10 untuk konten yang menyentuh jalur krisis).
+1. Tambah/ubah kartu hanya lewat PR dengan key Jira. File kini berada di `packages/config/` (file bersama, `COLLABORATION_RULES.md` §3:
+   approval Release Owner + pemilik fitur CareBridge, YanIanZ), dan setiap perubahan isi kartu wajib approval Safety Owner
+   (aturan `COLLABORATION_RULES.md` §1.10 untuk konten yang menyentuh jalur krisis). Setelah mengubah JSON, jalankan `npm run dataset:build`.
 2. Setiap kartu baru wajib: sumber dengan URL + lisensi yang diverifikasi + tanggal akses; parafrase (tanpa kutipan > 15 kata);
    lolos `selfHelpCards.test.mjs` (skema, topik, bilingual, istilah terlarang, jalur bantuan).
 3. Sumber baru ditambahkan ke tabel §3 dengan keputusan (dipakai / latar / dikecualikan) dan alasannya; host baru harus ditambahkan

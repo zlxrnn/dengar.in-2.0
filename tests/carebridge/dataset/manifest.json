@@ -2,16 +2,16 @@
   "schema": "proto/carebridge/dataset.proto",
   "artifacts": [
     {
-      "source": "self_help_cards.v1.json",
-      "artifact": "self_help_cards.v1.pb.zst",
+      "source": "packages/config/src/selfHelpCards.v1.json",
+      "artifact": "tests/carebridge/dataset/self_help_cards.v1.pb.zst",
       "sourceBytes": 77143,
       "artifactBytes": 21837,
       "sourceSha256": "9a694aba57719c6954c2fb8ab88ddef2f418806d8a3ffaebb05c7bbcef606d48",
       "artifactSha256": "0dd16fc2b0a1be0006191c402dd5a8b26e671cc4cad11ac62a3f79832e944ade"
     },
     {
-      "source": "cases.v1.jsonl",
-      "artifact": "cases.v1.pb.zst",
+      "source": "tests/carebridge/dataset/cases.v1.jsonl",
+      "artifact": "tests/carebridge/dataset/cases.v1.pb.zst",
       "sourceBytes": 41750,
       "artifactBytes": 9602,
       "sourceSha256": "60c6ff95f9be90bd3b79306661e5592a89669a47b2bb75fef9797610a85593d8",

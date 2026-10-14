@@ -2,25 +2,30 @@
 //
 //   npm run dataset:build
 //
-// Writes tests/carebridge/dataset/*.pb.zst and a manifest with sizes and SHA-256.
+// Sources (reviewed JSON/JSONL) live where they are consumed: the self-help
+// cards in packages/config/src (runtime knowledge base since SCRUM-45), the
+// evaluation cases in tests/carebridge/dataset. Artifacts and the manifest
+// (sizes + SHA-256) are written to tests/carebridge/dataset/.
 // tests/carebridge/datasetArtifacts.test.mjs fails if an artifact is stale.
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { EvalCaseSet, SelfHelpCardSet, casesToMessage, cardsToMessage, encode } from './datasetCodec.mjs';
 
-const dir = fileURLToPath(new URL('../../tests/carebridge/dataset/', import.meta.url));
+/** Repository root (all paths below are relative to it). */
+export const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+export const ARTIFACT_DIR = 'tests/carebridge/dataset/';
 
 export const ARTIFACTS = [
   {
-    source: 'self_help_cards.v1.json',
-    artifact: 'self_help_cards.v1.pb.zst',
+    source: 'packages/config/src/selfHelpCards.v1.json',
+    artifact: `${ARTIFACT_DIR}self_help_cards.v1.pb.zst`,
     type: SelfHelpCardSet,
     read: (text) => cardsToMessage('v1', JSON.parse(text)),
   },
   {
-    source: 'cases.v1.jsonl',
-    artifact: 'cases.v1.pb.zst',
+    source: `${ARTIFACT_DIR}cases.v1.jsonl`,
+    artifact: `${ARTIFACT_DIR}cases.v1.pb.zst`,
     type: EvalCaseSet,
     read: (text) => casesToMessage('v1', text.split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l))),
   },
@@ -31,14 +36,14 @@ const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 if (import.meta.url === `file://${process.argv[1]}`) {
   const manifest = { schema: 'proto/carebridge/dataset.proto', artifacts: [] };
   for (const a of ARTIFACTS) {
-    const sourcePath = `${dir}${a.source}`;
+    const sourcePath = `${REPO_ROOT}${a.source}`;
     if (!existsSync(sourcePath)) {
       console.log(`lewati ${a.source} (belum ada)`);
       continue;
     }
     const raw = readFileSync(sourcePath);
     const packed = encode(a.type, a.read(raw.toString('utf8')));
-    writeFileSync(`${dir}${a.artifact}`, packed);
+    writeFileSync(`${REPO_ROOT}${a.artifact}`, packed);
     manifest.artifacts.push({
       source: a.source,
       artifact: a.artifact,
@@ -49,5 +54,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
     console.log(`${a.source} ${raw.length} B -> ${a.artifact} ${packed.length} B (${Math.round((packed.length / raw.length) * 100)}%)`);
   }
-  writeFileSync(`${dir}manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
+  writeFileSync(`${REPO_ROOT}${ARTIFACT_DIR}manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
 }

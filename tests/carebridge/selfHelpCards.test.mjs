@@ -4,16 +4,31 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
+import {
+  SAFETY_PLAN_CARD_IDS,
+  SELF_HELP_CARDS,
+  SELF_HELP_CARD_IDS,
+  SELF_HELP_MAX_CARDS,
+  SELF_HELP_SELECTABLE_CARD_IDS,
+  getSelfHelpCard,
+  isSelectableSelfHelpCardId,
+  selfHelpAttribution,
+  selfHelpCatalogForPrompt,
+  selfHelpLicenseLabel,
+} from '../../packages/config/src/selfHelpCards.ts';
+
 /**
  * SCRUM-46: curated self-help knowledge base (strategy cards).
- * Validates tests/carebridge/dataset/self_help_cards.v1.json: schema, topic
- * coverage, bilingual text, source + licence, and forbidden terms. The cards
- * are content, not code; see docs/CAREBRIDGE_KNOWLEDGE_BASE.md for the source
- * table and review status. Not used by the pipeline yet (SCRUM-45).
+ * Validates packages/config/src/selfHelpCards.v1.json (the runtime knowledge
+ * base since SCRUM-45): schema, topic coverage, bilingual text, source +
+ * licence, and forbidden terms. The cards are content, not code; see
+ * docs/CAREBRIDGE_KNOWLEDGE_BASE.md for the source table and review status.
+ * The second half locks the typed accessor the prompt, validator, UI and
+ * export rely on.
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
-const DATASET_PATH = join(here, 'dataset', 'self_help_cards.v1.json');
+const DATASET_PATH = join(here, '..', '..', 'packages', 'config', 'src', 'selfHelpCards.v1.json');
 const cards = JSON.parse(readFileSync(DATASET_PATH, 'utf8'));
 
 /** Fixed topic vocabulary shared with the SCRUM-46 dataset builder. */
@@ -258,5 +273,65 @@ describe('Self-help cards dataset: safety language', () => {
         assert.ok(!/\bAnda\b/.test(text), `${card.id}.${path} uses "Anda"`);
       }
     }
+  });
+});
+
+describe('Self-help knowledge base accessor (SCRUM-45)', () => {
+  it('exposes exactly the reviewed JSON, read-only', () => {
+    assert.deepEqual(SELF_HELP_CARDS, cards);
+    assert.deepEqual(SELF_HELP_CARD_IDS, cards.map((c) => c.id));
+  });
+
+  it('getSelfHelpCard finds known ids and returns undefined otherwise', () => {
+    assert.equal(getSelfHelpCard('jadwal-tidur-konsisten').title.id, 'Jam tidur dan bangun yang tetap');
+    assert.equal(getSelfHelpCard('tidak-ada'), undefined);
+    assert.equal(getSelfHelpCard(''), undefined);
+  });
+
+  it('separates selectable cards from the static safety-plan cards', () => {
+    assert.deepEqual(SAFETY_PLAN_CARD_IDS, ['rencana-keselamatan-enam-langkah', 'rencana-keselamatan-cara-menggunakan']);
+    assert.equal(SELF_HELP_SELECTABLE_CARD_IDS.length, cards.length - SAFETY_PLAN_CARD_IDS.length);
+    for (const id of SAFETY_PLAN_CARD_IDS) {
+      assert.ok(!SELF_HELP_SELECTABLE_CARD_IDS.includes(id), `${id} must not be selectable`);
+      assert.equal(isSelectableSelfHelpCardId(id), false);
+    }
+    assert.equal(isSelectableSelfHelpCardId('napas-lambat-tiga-hitungan'), true);
+    assert.equal(isSelectableSelfHelpCardId('bukan-kartu'), false);
+    assert.equal(isSelectableSelfHelpCardId(42), false);
+    assert.equal(isSelectableSelfHelpCardId(undefined), false);
+    assert.equal(SELF_HELP_MAX_CARDS, 3);
+  });
+
+  it('the prompt catalog lists only selectable cards as "id: title — topics", without steps', () => {
+    const catalog = selfHelpCatalogForPrompt('id');
+    const lines = catalog.split('\n');
+    assert.equal(lines.length, SELF_HELP_SELECTABLE_CARD_IDS.length);
+    for (const line of lines) {
+      const match = line.match(/^([a-z0-9-]+): (.+) — ([a-z_, ]+)$/u);
+      assert.ok(match, `baris katalog tidak sesuai format: ${line}`);
+      const card = getSelfHelpCard(match[1]);
+      assert.ok(card, `id tidak dikenal di katalog: ${match[1]}`);
+      assert.equal(match[2], card.title.id);
+      assert.deepEqual(match[3].split(', '), card.topics);
+    }
+    for (const id of SAFETY_PLAN_CARD_IDS) assert.ok(!catalog.includes(id), `${id} must not be offered to the model`);
+    for (const card of cards) for (const step of card.steps.id) assert.ok(!catalog.includes(step), 'catalog must not carry step text');
+    assert.ok(catalog.length < 2800, `katalog ${catalog.length} karakter: terlalu panjang untuk prompt`);
+    assert.ok(selfHelpCatalogForPrompt('en').includes(getSelfHelpCard('jadwal-tidur-konsisten').title.en));
+  });
+
+  it('flags CC BY-NC-SA (WHO) cards as adapted and shortens licence labels for display', () => {
+    const who = cards.filter((c) => c.source.publisher === 'World Health Organization');
+    assert.ok(who.length >= 20);
+    for (const card of who) {
+      assert.equal(selfHelpAttribution(card).adapted, true, `${card.id} must carry the adaptation disclaimer`);
+      assert.equal(selfHelpLicenseLabel(card), 'CC BY-NC-SA 3.0 IGO');
+    }
+    for (const card of cards.filter((c) => c.source.publisher !== 'World Health Organization')) {
+      assert.equal(selfHelpAttribution(card).adapted, false, `${card.id} is not CC BY-NC-SA`);
+      assert.ok(selfHelpLicenseLabel(card).length < 90, `${card.id}: label lisensi harus pendek`);
+      assert.ok(selfHelpLicenseLabel(card, 'en') !== '', `${card.id}: label lisensi EN kosong`);
+    }
+    assert.equal(selfHelpLicenseLabel(getSelfHelpCard('jadwal-tidur-konsisten')), 'domain publik, atribusi ke CDC');
   });
 });
