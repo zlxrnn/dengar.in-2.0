@@ -169,7 +169,7 @@ Source: `services/orchestrator/src/providers/amdProvider.ts`, `carePassportPipel
 | Configured when | `AMD_BASE_URL` **and** `AMD_MODEL` are non-empty. `AMD_API_KEY` may be empty only for a loopback-only endpoint. |
 | Request | `temperature: 0.2`, `max_tokens` from `AMD_MAX_TOKENS` (see below); `response_format: { type: 'json_object' }` only when `AMD_JSON_MODE=true` (off by default; turn on only if `probeAmdEndpoint()` reports `jsonModeOk: true`). |
 | Max tokens | `AMD_MAX_TOKENS`, default 1024; must be an integer 1..8192, an empty or invalid value falls back to 1024 (never throws). Applies to Care Passport and opening lines; the probe keeps its own small limits. |
-| Timeout | `AMD_TIMEOUT_MS`, default 25000 ms, for both pipelines. |
+| Timeout | `AMD_TIMEOUT_MS`, default 30000 ms, for both pipelines. |
 | Not configured | Care Passport → `PROVIDER_UNAVAILABLE` with `no_provider_configured` (no fabricated passport). Opening lines → `FALLBACK_TEMPLATE` (deterministic, labelled "tanpa AI"). |
 | What the model sees | Care Passport: **only the server-redacted (sanitized) segments**, never raw text. Opening lines: only values from a passport the user marked `user_approved`. |
 | Order | Crisis gate (and explicit urgent-help request) on the raw / approved text → AI consent (`aiConsent: true`) → AMD inference → grounding validator. A crisis or a declined consent means **zero** provider calls. |

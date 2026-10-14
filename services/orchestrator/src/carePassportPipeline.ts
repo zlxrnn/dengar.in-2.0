@@ -43,7 +43,7 @@ export interface CarePassportPipelineOptions {
   now?: () => number;
 }
 
-const DEFAULT_TIMEOUT_MS = 25000;
+const DEFAULT_TIMEOUT_MS = 30000;
 
 /**
  * Sensitive intake only goes to the team's AMD endpoint by default. Third-party

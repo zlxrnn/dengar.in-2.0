@@ -121,7 +121,7 @@ AMD_API_KEY=<nilai AMD_VLLM_KEY>        # KODE: boleh kosong HANYA jika endpoint
 AMD_MODEL=Qwen/Qwen2.5-7B-Instruct      # KODE: harus persis seperti id di GET /v1/models
 AMD_JSON_MODE=                          # KODE: kosong = mati; isi `true` hanya jika probe melaporkan jsonModeOk: true
 AMD_MAX_TOKENS=                         # KODE: batas max_tokens; bilangan bulat 1..8192, kosong/tidak valid = 1024
-AMD_TIMEOUT_MS=25000                    # KODE: batas waktu per panggilan; dibaca pipeline, bawaan 25000
+AMD_TIMEOUT_MS=30000                    # KODE: batas waktu per panggilan; dibaca pipeline, bawaan 30000
 ```
 
 Perilaku kode yang relevan (KODE):
@@ -244,7 +244,7 @@ AMD_API_KEY=<key dari portal>
 AMD_MODEL=<model id persis seperti di GET {base}/models>
 AMD_JSON_MODE=
 AMD_MAX_TOKENS=
-AMD_TIMEOUT_MS=25000
+AMD_TIMEOUT_MS=30000
 ```
 
 4. Cek cepat dengan curl (tanpa mencetak key ke log bersama):

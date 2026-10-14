@@ -76,6 +76,6 @@ provider terpanggil, request itu muncul di log mock dan respons tertahan 12 dtk.
 - Gateway bench untuk TokenFactory adalah `https://developer.amd.com.cn/radeon/api/v1`.
   Belum diverifikasi apakah ini endpoint yang sama dengan yang dipakai SCRUM-13
   (AMD_SETUP §9.2 A2).
-- Bawaan `AMD_TIMEOUT_MS` dinaikkan dari 12000 ke 25000 (14 Okt): dengan 12000,
+- Bawaan `AMD_TIMEOUT_MS` dinaikkan dari 12000 ke 30000 (14 Okt): dengan 12000,
   Gemma-4-31B-IT sering timeout di Care Passport (12–20 dtk per passport).
 - Postgres tidak disertakan: tanpa `DATABASE_URL` aplikasi memakai penyimpanan in-memory.
