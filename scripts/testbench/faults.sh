@@ -9,13 +9,14 @@ trap cleanup EXIT
 cleanup
 
 $C run -d --name tf-mock bench scripts/testbench/faults.mjs mock >/dev/null
-web() { local name=$1; shift; $C run -d --name "$name" -e AMD_TIMEOUT_MS=12000 "$@" web >/dev/null; }
+# Production timeout (AMD_TIMEOUT_MS default) everywhere except the hang scenario, kept short.
+web() { local name=$1; shift; $C run -d --name "$name" "$@" web >/dev/null; }
 web tf-ok
 web tf-badkey -e AMD_API_KEY=invalid-key-testbench
 web tf-badmodel -e AMD_MODEL=model-tidak-ada
 web tf-429 -e AMD_BASE_URL=http://tf-mock:8080/s429/v1
 web tf-503 -e AMD_BASE_URL=http://tf-mock:8080/s503/v1
-web tf-hang -e AMD_BASE_URL=http://tf-mock:8080/hang/v1
+web tf-hang -e AMD_BASE_URL=http://tf-mock:8080/hang/v1 -e AMD_TIMEOUT_MS=12000
 
 for n in tf-ok tf-badkey tf-badmodel tf-429 tf-503 tf-hang; do
   until docker exec "$n" wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1; do sleep 2; done

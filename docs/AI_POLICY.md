@@ -168,7 +168,7 @@ Source: `services/orchestrator/src/providers/amdProvider.ts`, `carePassportPipel
 | Protocol | OpenAI-compatible: `GET {AMD_BASE_URL}/models`, `POST {AMD_BASE_URL}/chat/completions`, optional `Authorization: Bearer AMD_API_KEY`. `AMD_BASE_URL` is normalised to end in `/v1` (a trailing `/`, `/chat/completions` or `/models` is accepted). |
 | Configured when | `AMD_BASE_URL` **and** `AMD_MODEL` are non-empty. `AMD_API_KEY` may be empty only for a loopback-only endpoint. |
 | Request | `temperature: 0.2`, `max_tokens: 1024`; `response_format: { type: 'json_object' }` only when `AMD_JSON_MODE=true` (off by default; turn on only if `probeAmdEndpoint()` reports `jsonModeOk: true`). |
-| Timeout | `AMD_TIMEOUT_MS`, default 12000 ms, for both pipelines. |
+| Timeout | `AMD_TIMEOUT_MS`, default 25000 ms, for both pipelines. |
 | Not configured | Care Passport → `PROVIDER_UNAVAILABLE` with `no_provider_configured` (no fabricated passport). Opening lines → `FALLBACK_TEMPLATE` (deterministic, labelled "tanpa AI"). |
 | What the model sees | Care Passport: **only the server-redacted (sanitized) segments**, never raw text. Opening lines: only values from a passport the user marked `user_approved`. |
 | Order | Crisis gate (and explicit urgent-help request) on the raw / approved text → AI consent (`aiConsent: true`) → AMD inference → grounding validator. A crisis or a declined consent means **zero** provider calls. |

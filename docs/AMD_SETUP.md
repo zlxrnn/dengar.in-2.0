@@ -120,7 +120,7 @@ AMD_BASE_URL=http://127.0.0.1:8000/v1   # KODE: dengan/tanpa /v1, trailing slash
 AMD_API_KEY=<nilai AMD_VLLM_KEY>        # KODE: boleh kosong HANYA jika endpoint loopback tanpa --api-key
 AMD_MODEL=Qwen/Qwen2.5-7B-Instruct      # KODE: harus persis seperti id di GET /v1/models
 AMD_JSON_MODE=                          # KODE: kosong = mati; isi `true` hanya jika probe melaporkan jsonModeOk: true
-AMD_TIMEOUT_MS=12000                    # KODE: batas waktu per panggilan; dibaca pipeline, bawaan 12000
+AMD_TIMEOUT_MS=25000                    # KODE: batas waktu per panggilan; dibaca pipeline, bawaan 25000
 ```
 
 Perilaku kode yang relevan (KODE):
@@ -242,7 +242,7 @@ AMD_BASE_URL=<base URL dari portal, mis. https://…/v1>
 AMD_API_KEY=<key dari portal>
 AMD_MODEL=<model id persis seperti di GET {base}/models>
 AMD_JSON_MODE=
-AMD_TIMEOUT_MS=12000
+AMD_TIMEOUT_MS=25000
 ```
 
 4. Cek cepat dengan curl (tanpa mencetak key ke log bersama):

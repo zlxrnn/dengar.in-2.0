@@ -58,7 +58,7 @@ export interface OpeningLinesResult {
   warnings: string[];
 }
 
-const DEFAULT_TIMEOUT_MS = 12000;
+const DEFAULT_TIMEOUT_MS = 25000;
 const ADULT_AGE_BRACKET = '18-29';
 
 function defaultProviders(): LLMProvider[] {

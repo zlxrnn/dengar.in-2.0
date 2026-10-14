@@ -199,7 +199,7 @@ Apa yang **tidak** dijanjikan: anonimitas total. `piiRedactor` deterministik dan
 
 | Kegagalan | Perilaku sekarang | Catatan / yang masih terbuka |
 |---|---|---|
-| Endpoint AMD tidak terjangkau / timeout (`AMD_TIMEOUT_MS`, bawaan 12000 ms) | `generate` melempar error tanpa secret; pipeline mencatat ke `warnings`, lanjut ke provider berikutnya; jika habis → `PROVIDER_UNAVAILABLE` tanpa passport (F-B: `FALLBACK_TEMPLATE`) | Retry **tidak** otomatis; pengguna yang menekan |
+| Endpoint AMD tidak terjangkau / timeout (`AMD_TIMEOUT_MS`, bawaan 25000 ms) | `generate` melempar error tanpa secret; pipeline mencatat ke `warnings`, lanjut ke provider berikutnya; jika habis → `PROVIDER_UNAVAILABLE` tanpa passport (F-B: `FALLBACK_TEMPLATE`) | Retry **tidak** otomatis; pengguna yang menekan |
 | HTTP non-2xx dari endpoint (401 key salah, 404 model salah, 503 memuat model) | Error `AMD endpoint merespons dengan status <kode>: <pesan tersaring>` di log server | Di respons browser direduksi oleh `scrubWarning` + `toPublicWarnings` menjadi kepala singkat tanpa detail upstream |
 | Model membalas bukan JSON atau JSON terbungkus prosa/fence | `parseModelJson` mengekstrak objek `{…}`; gagal → draf ditolak → provider berikutnya / `PROVIDER_UNAVAILABLE` | Alasan `AMD_JSON_MODE` mati secara bawaan dan `probeAmdEndpoint` ada |
 | Model mengarang durasi, konteks, diagnosis, obat, persentase | Bidang dibuang, dihitung di `droppedClaims`, label unknown ditambahkan | `droppedClaims` adalah metrik perilaku model untuk evaluasi dengan endpoint nyata (AMD-13/14) |
