@@ -120,7 +120,8 @@ function NgobrolMenu({ pathname, focusRing, t }: { pathname: string; focusRing: 
           isActive || open ? 'bg-[#B8F34A] text-[#151515]' : 'bg-white text-[#151515] hover:bg-[#B8F34A]/40'
         }`}
       >
-        <MessagesSquare className="w-[18px] h-[18px] shrink-0" aria-hidden="true" />
+        {/* Ikon baru tampil mulai xl: 24px yang dihemat di lg dipakai tautan Konsultasi. */}
+        <MessagesSquare className="hidden xl:block w-[18px] h-[18px] shrink-0" aria-hidden="true" />
         <span>{t.chat}</span>
         <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
@@ -274,13 +275,12 @@ export function Navbar() {
     { href: '/dashboard', label: t.home, icon: Compass },
     { href: '/mission', label: t.mission, icon: CheckCircle2 },
     { href: '/checkin', label: t.checkin, icon: Shield },
-    { href: '/journal', label: t.journal, icon: BookOpen },
-    // Tombol Ngobrol mengambil ruang di laptop 1024px; Ruang Cerita ikut baris atas
-    // mulai xl (tetap ada di footer dan menu seluler).
-    { href: '/forum', label: t.forum, icon: Users, desktopClass: 'hidden xl:inline-flex' },
-    // Enam tautan + tombol kanan tidak muat di bawah 1536px; tautan ini ikut baris
-    // atas mulai 2xl saja (tetap ada di menu seluler dan halaman lain).
-    { href: '/care-passport', label: t.carePassport, icon: ClipboardList, desktopClass: 'hidden 2xl:inline-flex' },
+    // Catatan Konsultasi (CareBridge) tampil mulai lg dengan label ringkas; sebagai
+    // gantinya Jurnal ikut baris atas mulai xl dan Ruang Cerita mulai 2xl (keduanya
+    // tetap ada di beranda, footer, dan menu seluler).
+    { href: '/journal', label: t.journal, icon: BookOpen, desktopClass: 'hidden xl:inline-flex' },
+    { href: '/forum', label: t.forum, icon: Users, desktopClass: 'hidden 2xl:inline-flex' },
+    { href: '/care-passport', label: t.carePassport, shortLabel: t.carePassportShort, icon: ClipboardList },
   ];
 
   // All links for mobile drawer
@@ -317,13 +317,14 @@ export function Navbar() {
       <header className="sticky top-0 z-40 bg-[#FFF8EF] supports-[backdrop-filter]:bg-[#FFF8EF]/[0.92] supports-[backdrop-filter]:backdrop-blur-md border-b-2 border-[#151515]">
         {/* Anggaran lebar baris atas, diukur dengan font sistem tebal 14px (SF Pro; Roboto
             sedikit lebih sempit, Segoe UI sedikit lebih lebar). Angka ID / EN:
-            lg 1024 (lebar isi 960): logo 128/154 + Ngobrol 121/94 + 4 tautan (px-2) 271/288
+            lg 1024 (lebar isi 960): logo 128/154 + Ngobrol tanpa ikon 97/70 + 4 tautan
+              (px-2; Beranda, Misi, Check-in, Konsultasi/Care notes) 301/311
               + jarak 16+16 + Bantuan(ikon) 46 + Keluar Cepat 141/121 + Darurat 109/134
-              + Akses 44 + jarak 24 = 916/936 dari 960.
-            xl 1280 (1216): + Ruang Cerita, ikon Bantuan berlabel, petunjuk Esc, px-2.5
-              = 1185/1170 dari 1216.
-            2xl 1536 (1472, wadah dilepas dari batas 1280px): + Catatan Konsultasi dan
-              "Bantuan darurat" = 1404/1366.
+              + Akses 44 + jarak 24 = 922/936 dari 960.
+            xl 1280 (1216): + ikon Ngobrol, Jurnal, ikon Bantuan berlabel, petunjuk Esc,
+              px-2.5 = 1168/1164 dari 1216.
+            2xl 1536 (1472, wadah dilepas dari batas 1280px): + Ruang Cerita, label penuh
+              "Catatan Konsultasi", dan "Bantuan darurat" = 1404/1366.
             1680 (1616): + tombol bahasa ringkas 52 dan label "Akses cepat" = 1548/1517.
             iPad mendatar 1024-1194 masuk rentang lg; 1366 masuk xl.
             Di bawah lg: logo 128/154, Darurat 105/130, Akses 44, jarak 16; nama merek
@@ -370,7 +371,14 @@ export function Navbar() {
                     }`}
                   >
                     {/* Tautan tengah tanpa ikon agar tombol Ngobrol muat dalam satu baris. */}
-                    <span>{item.label}</span>
+                    {item.shortLabel ? (
+                      <>
+                        <span className="2xl:hidden">{item.shortLabel}</span>
+                        <span className="hidden 2xl:inline">{item.label}</span>
+                      </>
+                    ) : (
+                      <span>{item.label}</span>
+                    )}
                   </Link>
                 );
               })}

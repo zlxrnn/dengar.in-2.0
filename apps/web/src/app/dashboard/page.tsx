@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Calendar,
   Check,
+  ClipboardList,
 } from 'lucide-react';
 import {
   initAnonymousSession,
@@ -382,6 +383,26 @@ export default function DashboardPage() {
                   </div>
                   <h3 className="font-bold text-base text-ink leading-snug">{t.forum}</h3>
                   <p className="text-base text-[#59544D] leading-relaxed">{t.forumHint}</p>
+                </div>
+              </Link>
+              </Reveal>
+
+              {/* CareBridge: selebar dua kolom. Halaman tujuan tetap memeriksa consent
+                  aplikasi, usia, dan persetujuan AI terpisah sendiri. */}
+              <Reveal delay={400} className="h-full sm:col-span-2">
+              <Link href="/care-passport" className="group block h-full rounded-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-cobalt focus-visible:ring-offset-2">
+                <div className="bg-white border-2 border-ink border-t-[6px] border-t-lime rounded-md p-4 h-full flex flex-col sm:flex-row sm:items-center gap-3 shadow-hard-sm transition-[transform,box-shadow] duration-200 ease-spring group-hover:-translate-x-[1px] group-hover:-translate-y-[1px] group-hover:shadow-hard group-active:translate-x-[1px] group-active:translate-y-[1px] group-active:shadow-none">
+                  <div className="shrink-0 w-8 h-8 rounded bg-cobalt text-white border-2 border-ink flex items-center justify-center" aria-hidden="true">
+                    <ClipboardList className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <h3 className="font-bold text-base text-ink leading-snug">{t.carePassport}</h3>
+                    <p className="text-base text-[#59544D] leading-relaxed">{t.carePassportHint}</p>
+                  </div>
+                  <span className="shrink-0 inline-flex items-center gap-1.5 min-h-[44px] text-base font-bold text-[#2B51E6] underline underline-offset-4 decoration-2">
+                    {t.carePassportAction}
+                    <ArrowRight className="w-4 h-4 transition-transform duration-400 ease-spring group-hover:translate-x-1" aria-hidden="true" />
+                  </span>
                 </div>
               </Link>
               </Reveal>

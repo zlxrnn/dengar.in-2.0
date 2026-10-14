@@ -39,6 +39,8 @@ const id = {
     journal: 'Jurnal',
     forum: 'Ruang Cerita',
     carePassport: 'Catatan Konsultasi',
+    // Label ringkas di baris atas desktop lg-xl (lebar 74px pada font tebal 14px).
+    carePassportShort: 'Konsultasi',
     resources: 'Bantuan & Kontak Resmi',
     help: 'Bantuan',
     helpFull: 'Bantuan dan kontak resmi',
@@ -198,6 +200,7 @@ const en: typeof id = {
     journal: 'Journal',
     forum: 'Story Room',
     carePassport: 'Consultation Notes',
+    carePassportShort: 'Care notes',
     resources: 'Help & Official Contacts',
     help: 'Help',
     helpFull: 'Help and official contacts',

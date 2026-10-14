@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   ShieldCheck,
   ArrowRight,
@@ -125,6 +126,16 @@ export default function LandingPage() {
                   {t.emergency}
                 </Button>
               </div>
+
+              {/* CareBridge: tanpa consent, useConsentGuard di /care-passport mengarahkan ke
+                  /consent?next=/care-passport lalu kembali ke sini. Alur consent tidak diubah. */}
+              <Link
+                href="/care-passport"
+                className="group inline-flex items-center gap-1.5 min-h-[44px] text-base font-bold text-[#2B51E6] underline underline-offset-4 decoration-2 rounded-[4px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE] focus-visible:ring-offset-2"
+              >
+                <span>{t.carePassportCta}</span>
+                <ArrowRight className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" />
+              </Link>
             </div>
 
             {/* Kolom kanan: check-in suasana hati yang benar-benar berfungsi (bukan
