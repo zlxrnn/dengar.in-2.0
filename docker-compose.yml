@@ -1,0 +1,63 @@
+# Dengar.in: menjalankan dan menguji aplikasi di Docker (jalankan dari root repo).
+#
+#   docker compose up --build                 # web (http://localhost:3000) + Redis
+#   docker compose --profile test run --rm test   # unit test CareBridge di container
+#   docker compose down -v                    # hentikan dan hapus volume
+#
+# Secret dibaca dari .env.local saat RUNTIME dan tidak masuk image (.dockerignore).
+# Tanpa DATABASE_URL, aplikasi memakai fallback in-memory (data hilang saat restart).
+name: dengarin
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: dengarin-web
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      # Menimpa REDIS_URL kosong di .env.local; nama host `redis` = service di atas.
+      REDIS_URL: redis://redis:6379
+    # Agar AMD_BASE_URL=http://host.docker.internal:8000/v1 menjangkau SSH tunnel
+    # di host (127.0.0.1 di dalam container adalah container itu sendiri).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Hanya jalan dengan `--profile test`. Memasang source ke container karena
+  # .dockerignore sengaja membuang tests/ dan scripts/ dari image web.
+  test:
+    profiles: ["test"]
+    image: node:22-alpine
+    working_dir: /app
+    environment:
+      CI: "true"
+    volumes:
+      - .:/app
+      # node_modules Linux terpisah dari node_modules macOS di host.
+      - node_modules_root:/app/node_modules
+      - node_modules_web:/app/apps/web/node_modules
+    command: >
+      sh -c "npm ci --no-audit --no-fund &&
+             node --experimental-strip-types --version &&
+             npm run test:carebridge"
+
+volumes:
+  node_modules_root:
+  node_modules_web:
+

@@ -168,7 +168,7 @@ Hasil yang diharapkan saat endpoint hidup:
 Tindak lanjut:
 - `jsonModeOk: true` → boleh set `AMD_JSON_MODE=true`. `false` → biarkan kosong.
 - Catat `models`, `latencyMs`, tag image Docker, dan tanggal ke tabel status AMD-02 di [AMD_TRACK2_TASKS.md](AMD_TRACK2_TASKS.md). Ini "trace AMD" pertama yang diminta rubrik.
-- Lalu jalankan `npm run test:carebridge` (tetap memakai tiruan; per 14 Okt 2026 harus 237/237) dan ulangi kasus A, B, D, E serta 20 skenario terhadap endpoint nyata sesuai [rubrik §3](CAREBRIDGE_EVAL_RUBRIC.md).
+- Lalu jalankan `npm run test:carebridge` (tetap memakai tiruan; per 14 Okt 2026 harus 243/243) dan ulangi kasus A, B, D, E serta 20 skenario terhadap endpoint nyata dengan `npm run eval:carebridge:live` (lihat [rubrik §3](CAREBRIDGE_EVAL_RUBRIC.md)). `scripts/probe-amd.mjs` kini ada; jalankan lewat `npm run probe:amd`.
 
 ## 7. Daftar tutup sesi (wajib setiap hari)
 
