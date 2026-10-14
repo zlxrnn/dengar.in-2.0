@@ -1,0 +1,74 @@
+# Local test bench (docs/TESTBENCH.md). Secrets live in .env.testbench
+# (gitignored); always pass it with --env-file:
+#
+#   docker compose --env-file .env.testbench -f docker-compose.testbench.yml up -d --build web
+#   docker compose --env-file .env.testbench -f docker-compose.testbench.yml run --rm bench
+#
+# App wiring:
+#   Tier 1 chat        -> DeepSeek (direct)
+#   Second Brain       -> OpenCode Zen (OPENROUTER_* slot, GLM by default)
+#   Care Passport (AMD)-> TokenFactory Qwen (AMD_* slot, OpenAI-compatible)
+name: dengarin-testbench
+
+x-llm-env: &llm-env
+  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+  DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
+  OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
+  OPENCODE_BASE_URL: ${OPENCODE_BASE_URL:-https://opencode.ai/zen/v1}
+  OPENCODE_NEMOTRON_MODEL: ${OPENCODE_NEMOTRON_MODEL:-nemotron-3.5-lightning-free}
+  OPENCODE_GLM_MODEL: ${OPENCODE_GLM_MODEL:-glm-5.3-flash}
+  TOKENFACTORY_API_KEY: ${TOKENFACTORY_API_KEY:-}
+  TOKENFACTORY_BASE_URL: ${TOKENFACTORY_BASE_URL:-}
+  TOKENFACTORY_MODEL: ${TOKENFACTORY_MODEL:-}
+
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "${TESTBENCH_WEB_PORT:-3000}:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
+      OPENROUTER_API_KEY: ${OPENCODE_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENCODE_BASE_URL:-https://opencode.ai/zen/v1}
+      OPENROUTER_MODEL: ${TESTBENCH_DEBIASER_MODEL:-glm-5.3-flash}
+      AMD_BASE_URL: ${TOKENFACTORY_BASE_URL:-}
+      AMD_API_KEY: ${TOKENFACTORY_API_KEY:-}
+      AMD_MODEL: ${TOKENFACTORY_MODEL:-}
+      AMD_JSON_MODE: ${TOKENFACTORY_JSON_MODE:-}
+      AMD_TIMEOUT_MS: ${TOKENFACTORY_TIMEOUT_MS:-20000}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-testbench-only-admin-secret-change-me}
+
+  bench:
+    build:
+      context: .
+      dockerfile: docker/testbench/Dockerfile
+    profiles: ["bench"]
+    environment:
+      <<: *llm-env
+      BENCH_WEB_URL: http://web:3000
+      BENCH_MODELS: ${BENCH_MODELS:-}
+      BENCH_PASSPORT_MODELS: ${BENCH_PASSPORT_MODELS:-}
+      BENCH_PASSPORT_JSON_MODE: ${TOKENFACTORY_JSON_MODE:-}
+      BENCH_PASSPORT_TIMEOUT_MS: ${BENCH_PASSPORT_TIMEOUT_MS:-}
+      BENCH_CHAT_TIMEOUT_MS: ${BENCH_CHAT_TIMEOUT_MS:-}
+    volumes:
+      - ./packages:/app/packages:ro
+      - ./services:/app/services:ro
+      - ./tests:/app/tests:ro
+      - ./scripts/testbench/bench.mjs:/app/scripts/testbench/bench.mjs:ro
+      - ./scripts/testbench/reports:/app/scripts/testbench/reports
