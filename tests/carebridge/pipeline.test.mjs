@@ -2,9 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   runCarePassportPipeline,
+  needsSoftClarification,
+  isUnexplainedComplaint,
   DEFAULT_CLARIFICATION_QUESTION,
 } from '../../services/orchestrator/src/carePassportPipeline.ts';
 import { CARE_PASSPORT_INPUT_OPEN } from '../../packages/prompts/src/carePassport.ts';
+import { GOLDEN_CASES } from './fixtures.mjs';
 
 const STUDENT_STRESS =
   'Aku kewalahan dengan tugas kuliah. Kalau deadline berdekatan, aku sulit fokus. Aku belum tahu gimana menjelaskan ini saat minta bantuan.';
@@ -195,6 +198,173 @@ describe('Care Passport pipeline: escalation only', () => {
     );
     assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED');
     assert.ok(result.warnings.includes('deterministic_high_distress'));
+  });
+});
+
+describe('Care Passport pipeline: soft clarification when only the concern is known (SCRUM-32)', () => {
+  const golden = (id) => GOLDEN_CASES.find((c) => c.id === id);
+  const run = (text, draft, extra = {}) =>
+    runCarePassportPipeline(
+      { rawText: text, sanitizedText: text, aiConsent: true, ...extra },
+      { providers: [mockProvider('amd:test', returns(draft), { isAmd: true })] }
+    );
+
+  it('golden case B: a grounded but vague concern plus a model question asks for clarification', async () => {
+    const caseB = golden('B');
+    const result = await run(caseB.input, caseB.mockModelOutput);
+    assert.equal(result.state, 'NEEDS_CLARIFICATION');
+    assert.equal(result.passport.concerns.length, 1, 'the grounded concern is kept, not dropped');
+    assert.equal(result.completeness.known, 1);
+    assert.equal(result.clarificationQuestion, caseB.mockModelOutput.clarificationQuestion);
+    assert.ok(result.warnings.includes('low_completeness_clarification'));
+    assert.ok(result.droppedClaims >= caseB.expected.minDropped);
+  });
+
+  it('golden case A stays READY_FOR_USER_REVIEW (two core facts known)', async () => {
+    const caseA = golden('A');
+    const result = await run(caseA.input, caseA.mockModelOutput);
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.equal(result.completeness.known, 2);
+  });
+
+  it('golden case D stays READY_FOR_USER_REVIEW: only the concern is known but the model asked nothing', async () => {
+    const caseD = golden('D');
+    const sanitized = caseD.piiSpans.reduce((text, span) => text.replace(span, '[disamarkan]'), caseD.input);
+    const result = await runCarePassportPipeline(
+      { rawText: caseD.input, sanitizedText: sanitized, aiConsent: true },
+      { providers: [mockProvider('amd:test', returns(caseD.mockModelOutput), { isAmd: true })] }
+    );
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.equal(result.completeness.known, 1);
+    assert.equal(result.clarificationQuestion, undefined);
+  });
+
+  it('golden case D stays READY_FOR_USER_REVIEW even when the model asks anyway (observed with deepseek-flash, 3/3)', async () => {
+    // A named cause ("karena target penjualan") makes the story specific; the
+    // user-text gate keeps the soft path closed no matter what the model asks.
+    const caseD = golden('D');
+    const sanitized = caseD.piiSpans.reduce((text, span) => text.replace(span, '[disamarkan]'), caseD.input);
+    const result = await runCarePassportPipeline(
+      { rawText: caseD.input, sanitizedText: sanitized, aiConsent: true },
+      {
+        providers: [mockProvider('amd:test', returns({
+          ...caseD.mockModelOutput,
+          clarificationQuestion: 'Sejak kapan kamu merasa stres karena target penjualan ini?',
+        }), { isAmd: true })],
+      }
+    );
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.equal(result.completeness.known, 1);
+    assert.equal(result.clarificationQuestion, undefined);
+    assert.ok(!result.warnings.includes('low_completeness_clarification'));
+  });
+
+  it('a vague complaint with two core facts known is READY_FOR_USER_REVIEW', async () => {
+    const text = 'Aku sering ngerasa nggak baik, entah kenapa. Jadi susah fokus kerja.';
+    const result = await run(text, {
+      concerns: [{ value: 'Sering merasa tidak baik', source: 'user_input', sourceQuote: 'sering ngerasa nggak baik' }],
+      dailyImpact: [{ value: 'Susah fokus kerja', source: 'user_input', sourceQuote: 'susah fokus kerja' }],
+      clarificationQuestion: 'Perasaan tidak baik itu paling sering muncul kapan?',
+    });
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.equal(result.completeness.known, 2);
+  });
+
+  it('isUnexplainedComplaint recognises Indonesian "cannot name the cause" phrasings only', () => {
+    for (const text of [
+      'Aku sering ngerasa nggak baik, entah kenapa.',
+      'Rasanya berat terus, nggak tahu kenapa.',
+      'Gue sering sedih, gak tau sebabnya.',
+      'Aku bingung kenapa aku jadi kayak gini.',
+      'Beberapa hari ini murung tanpa sebab yang jelas.',
+      'Capek banget tanpa alasan.',
+      'Sering nangis, tidak tahu penyebabnya.',
+    ]) assert.equal(isUnexplainedComplaint(text), true, text);
+    for (const text of [
+      'Aku stres karena target penjualan bulan ini.',
+      'Aku kewalahan dengan tugas kuliah. Kalau deadline berdekatan, aku sulit fokus.',
+      'Orang tuaku sering bertengkar dan aku capek dengar mereka.',
+      'Aku tahu kenapa aku sedih: pacarku pergi.',
+    ]) assert.equal(isUnexplainedComplaint(text), false, text);
+  });
+
+  it('never invents a question: a lone concern without a model question is READY_FOR_USER_REVIEW', async () => {
+    const text = 'Aku sering ngerasa nggak baik, entah kenapa.';
+    const result = await run(text, {
+      concerns: [{ value: 'Sering merasa tidak baik', source: 'user_input', sourceQuote: 'sering ngerasa nggak baik' }],
+    });
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.equal(result.completeness.known, 1);
+    assert.ok(!result.warnings.includes('low_completeness_clarification'));
+  });
+
+  it('a question the validator rejects (diagnostic label) cannot trigger the soft path', async () => {
+    const text = 'Aku sering ngerasa nggak baik, entah kenapa.';
+    const result = await run(text, {
+      concerns: [{ value: 'Sering merasa tidak baik', source: 'user_input', sourceQuote: 'sering ngerasa nggak baik' }],
+      clarificationQuestion: 'Apakah kamu merasa ini gejala depresi?',
+    });
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.equal(result.clarificationQuestion, undefined);
+  });
+
+  it('asks at most once: after a clarification answer a grounded concern goes to review', async () => {
+    const segments = [
+      { id: 'intake', kind: 'intake', text: 'Aku sering ngerasa nggak baik, entah kenapa.' },
+      { id: 'clarification:1', kind: 'clarification', text: 'Nggak tahu juga, pokoknya nggak enak.' },
+    ];
+    const result = await run('ignored', {
+      concerns: [{ value: 'Sering merasa tidak baik', source: 'user_input', sourceQuote: 'sering ngerasa nggak baik' }],
+      clarificationQuestion: 'Perasaan tidak baik itu paling sering muncul kapan?',
+    }, { segments });
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.equal(result.completeness.known, 1);
+    assert.equal(result.clarificationQuestion, undefined);
+  });
+
+  it('the hard rule (no grounded concern) still asks again after a clarification answer, with the default question', async () => {
+    const segments = [
+      { id: 'intake', kind: 'intake', text: 'Aku sering ngerasa nggak baik, entah kenapa.' },
+      { id: 'clarification:1', kind: 'clarification', text: 'Nggak tahu juga, pokoknya nggak enak.' },
+    ];
+    const result = await run('ignored', { concerns: [] }, { segments });
+    assert.equal(result.state, 'NEEDS_CLARIFICATION');
+    assert.equal(result.clarificationQuestion, DEFAULT_CLARIFICATION_QUESTION);
+  });
+
+  it('model escalation outranks the soft path', async () => {
+    const text = 'Aku sering ngerasa nggak baik, entah kenapa.';
+    const result = await run(text, {
+      concerns: [{ value: 'Sering merasa tidak baik', source: 'user_input', sourceQuote: 'sering ngerasa nggak baik' }],
+      clarificationQuestion: 'Perasaan tidak baik itu paling sering muncul kapan?',
+      humanSupportSuggested: true,
+    });
+    assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED');
+    assert.equal(result.clarificationQuestion, undefined);
+  });
+
+  it('a deterministic high-distress flag outranks the soft path', async () => {
+    const text = 'Aku udah hancur lebur, nggak tahu kenapa.';
+    const result = await run(text, {
+      concerns: [{ value: 'Merasa hancur', source: 'user_input', sourceQuote: 'hancur lebur' }],
+      clarificationQuestion: 'Perasaan itu paling sering muncul kapan?',
+      humanSupportSuggested: false,
+    });
+    assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED');
+    assert.ok(result.warnings.includes('deterministic_high_distress'));
+  });
+
+  it('needsSoftClarification is a pure rule: low completeness AND unexplained cause AND model question AND first round', () => {
+    const q = 'Perasaan itu paling sering muncul kapan?';
+    const intakeOnly = [{ kind: 'intake' }];
+    const vague = 'Aku sering ngerasa nggak baik, entah kenapa.';
+    const specific = 'Aku stres karena target penjualan bulan ini.';
+    const low = { known: 1, total: 3, unknownLabels: [] };
+    assert.equal(needsSoftClarification(low, q, intakeOnly, vague), true);
+    assert.equal(needsSoftClarification({ known: 2, total: 3, unknownLabels: [] }, q, intakeOnly, vague), false);
+    assert.equal(needsSoftClarification(low, q, intakeOnly, specific), false);
+    assert.equal(needsSoftClarification(low, undefined, intakeOnly, vague), false);
+    assert.equal(needsSoftClarification(low, q, [...intakeOnly, { kind: 'clarification' }], vague), false);
   });
 });
 
