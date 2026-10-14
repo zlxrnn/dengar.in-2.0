@@ -39,7 +39,7 @@
     "test:migrations": "node --experimental-strip-types tests/persistence/migrations.test.mjs",
     "test:forum-domain": "node --experimental-strip-types tests/forum/forumDomainValidation.test.mjs",
     "test:security-redis-gate": "node --experimental-strip-types tests/security/redisTestGate.test.mjs",
-    "test:infra": "node --experimental-strip-types tests/infra/envExampleParity.test.mjs && node --experimental-strip-types tests/infra/ruangNgobrolLinks.test.mjs && node --experimental-strip-types tests/infra/serverClientImports.test.mjs",
+    "test:infra": "node --experimental-strip-types tests/infra/envExampleParity.test.mjs && node --experimental-strip-types tests/infra/ruangNgobrolLinks.test.mjs && node --experimental-strip-types tests/infra/serverClientImports.test.mjs && node --experimental-strip-types tests/infra/cacheHandlerBuildId.test.mjs",
     "lint:services": "eslint --config eslint.services.config.mjs services packages",
     "test:carebridge": "node --experimental-strip-types --test tests/carebridge/*.test.mjs",
     "probe:amd": "node --experimental-strip-types --env-file=.env.local scripts/probe-amd.mjs",

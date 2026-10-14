@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createClient } from 'redis';
 import { PHASE_PRODUCTION_BUILD } from 'next/constants.js';
 import { CacheHandler } from '@fortedigital/nextjs-cache-handler';
@@ -18,7 +19,52 @@ import createCompositeHandler from '@fortedigital/nextjs-cache-handler/composite
  * Referensi: https://caching-tools.github.io/next-shared-cache
  */
 
-CacheHandler.onCreation(() => {
+const LEGACY_KEY_PREFIX = 'dengarin:next:';
+
+/**
+ * Prefiks key Redis yang diberi namespace per build.
+ *
+ * Redis bersama hidup lebih lama daripada satu build. Tanpa namespace, HTML
+ * build lama tetap dibaca (x-nextjs-cache: HIT) setelah redeploy dan menunjuk
+ * ke chunk JS/CSS yang sudah tidak ada (404): seluruh situs tampil tanpa
+ * style dan tidak interaktif. Menyertakan BUILD_ID membuat setiap build
+ * memakai ruang key sendiri; key build lama berhenti dibaca dan dibersihkan
+ * oleh TTL/eviction.
+ *
+ * @param {string | undefined} buildId
+ * @returns {string} mis. 'dengarin:next:<BUILD_ID>:' — tanpa build id kembali
+ *   ke prefiks lama 'dengarin:next:'.
+ */
+export function buildKeyPrefix(buildId) {
+  const id = typeof buildId === 'string' ? buildId.trim().replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64) : '';
+  return id ? `${LEGACY_KEY_PREFIX}${id}:` : LEGACY_KEY_PREFIX;
+}
+
+/**
+ * Menentukan build id tanpa pernah melempar error.
+ *
+ * Urutan: `buildId` dari konteks onCreation (library membaca `.next/BUILD_ID`
+ * dari serverDistDir) → `.next/BUILD_ID` di sebelah file ini → deployment id
+ * dari platform (VERCEL_DEPLOYMENT_ID) → undefined.
+ *
+ * @param {{ buildId?: string } | undefined} context
+ * @param {{ buildIdFile?: URL | string, env?: NodeJS.ProcessEnv }} [options] — untuk pengujian.
+ * @returns {string | undefined}
+ */
+export function resolveBuildId(context, options = {}) {
+  const { buildIdFile = new URL('./.next/BUILD_ID', import.meta.url), env = process.env } = options;
+  const fromContext = typeof context?.buildId === 'string' ? context.buildId.trim() : '';
+  if (fromContext) return fromContext;
+  try {
+    const fromFile = readFileSync(buildIdFile, 'utf8').trim();
+    if (fromFile) return fromFile;
+  } catch {
+    // File tidak ada (mis. belum build) — lanjut ke fallback berikutnya.
+  }
+  return env.VERCEL_DEPLOYMENT_ID?.trim() || undefined;
+}
+
+CacheHandler.onCreation((context) => {
   // Scope global dipakai supaya hanya ada SATU koneksi Redis. Tanpa ini,
   // setiap pembuatan handler akan membuka socket baru.
   if (global.cacheHandlerConfig) {
@@ -86,12 +132,19 @@ CacheHandler.onCreation(() => {
       return global.cacheHandlerConfig;
     }
 
+    // Namespace per build (bug QA 14 Okt: HTML build lama menunjuk chunk 404).
+    // Tidak pernah melempar: tanpa build id, prefiks lama dipakai dan dicatat.
+    const buildId = resolveBuildId(context);
+    if (!buildId) {
+      console.warn('[CacheHandler] BUILD_ID tidak terbaca — cache halaman tidak diberi namespace per build.');
+    }
+
     const redisCacheHandler = createRedisHandler({
       // keyPrefix sudah otomatis ditambahkan ke SEMUA key handler ini,
       // termasuk key tag bersama. Menulis prefiks lagi di sharedTagsKey
       // menghasilkan nama ganda seperti 'dengarin:next:dengarin:next:__sharedTags__'.
       client: redisClient,
-      keyPrefix: 'dengarin:next:'
+      keyPrefix: buildKeyPrefix(buildId)
     });
 
     global.cacheHandlerConfigPromise = null;

@@ -12,7 +12,7 @@ const SOURCE_EXT = /\.(ts|tsx|js|mjs|cjs)$/;
 const SKIP_DIRS = new Set(['node_modules', '.next', 'dist']);
 
 // Set by Node/Next.js itself, never by an operator.
-const FRAMEWORK_VARS = new Set(['NODE_ENV', 'NEXT_PHASE', 'NEXT_RUNTIME', 'NEXT_TELEMETRY_DISABLED', 'VERCEL', 'VERCEL_ENV', 'CI']);
+const FRAMEWORK_VARS = new Set(['NODE_ENV', 'NEXT_PHASE', 'NEXT_RUNTIME', 'NEXT_TELEMETRY_DISABLED', 'VERCEL', 'VERCEL_ENV', 'VERCEL_DEPLOYMENT_ID', 'CI']);
 
 async function* walk(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
