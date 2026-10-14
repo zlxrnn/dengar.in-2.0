@@ -13,6 +13,8 @@ Tag status: **OK** = terbukti (sumber resmi atau trace kita sendiri) · **RISK**
 
 **Rekomendasi: GO terbatas ("Go-Lite").**
 
+> **Keputusan tim (14 Okt 2026):** Dengar.in memakai AMD Token Factory **tanpa** kredit AMD Developer Cloud. Opsi B (VM MI300X + vLLM sendiri) **ditutup**, bukan sekadar ditunda; pemicu §5 menuju Go penuh tidak berlaku lagi. Yang tersisa hanya Go-Lite (opsi A) atau No-Go total, tergantung jawaban organizer (§7).
+
 1. **GO** untuk pekerjaan murah dan reversibel: feature flag `CAREBRIDGE_GEMMA_ENABLED` (default OFF), provider Gemma yang memakai ulang `createAmdProvider`, uji rollback, dan pengumpulan bukti (model id, trace, latensi) dari Gemma-4-31B-IT yang **sudah berjalan** di AMD Token Factory. Estimasi 0,5–1 hari kerja satu orang, tanpa biaya, tanpa VM.
 2. **NO-GO (saat ini)** untuk menyewa VM MI300X dan menjalankan vLLM Gemma sendiri hanya demi bukti `rocminfo`/`rocm-smi`. Alasan: aturan Google prize untuk ACT III tidak dipublikasikan, kredit/billing AMD Developer Cloud belum di tangan tim, P0 Token Factory belum stabil (429/503), dan tenggat tinggal ±3–4 hari. Jalur ini hanya dibuka bila pemicu di §5 terpenuhi.
 3. **Kirim pertanyaan ke organizer hari ini** (teks siap pakai di §7). Jawabannya menentukan apakah langkah 1 cukup atau langkah 2 perlu dibuka.
@@ -58,14 +60,14 @@ Prinsip yang dijaga: jalur utama Token Factory + ManualNote tidak boleh berubah 
 | Opsi | Usaha | Biaya | Risiko utama | Keputusan |
 |---|---|---|---|---|
 | **A. Go-Lite**: flag + provider Gemma (Token Factory) + rollback test + bukti trace | 0,5–1 hari, 1 orang | $0 | Token Factory 429/503 (K5); bukti hardware tidak ada (K6) | **GO** |
-| **B. VM MI300X + vLLM Gemma 4** (31B atau 12B) | 1–2 hari + menunggu kredit/kartu; 2–3 jam setup bila image dan model unduh lancar (±62 GB) | $2–2,6/jam; $100 kredit ≈ 40–50 jam | Approval/kartu (K12); image/flag belum diuji (K10); menyedot waktu P0 (K14); endpoint harus bisa dijangkau Vercel dengan aman (§11.1) | **NO-GO sekarang**; buka bila pemicu §5 |
+| **B. VM MI300X + vLLM Gemma 4** (31B atau 12B) | 1–2 hari + menunggu kredit/kartu; 2–3 jam setup bila image dan model unduh lancar (±62 GB) | $2–2,6/jam; $100 kredit ≈ 40–50 jam | Approval/kartu (K12); image/flag belum diuji (K10); menyedot waktu P0 (K14); endpoint harus bisa dijangkau Vercel dengan aman (§11.1) | **NO-GO final** (keputusan tim 14 Okt: tanpa kredit AMD) |
 | C. Tidak melakukan apa pun | 0 | $0 | Kehilangan peluang $5.000 yang murah dicoba | tidak dipilih |
 
 ---
 
 ## 5. Apa yang akan mengubah keputusan
 
-Dari **Go-Lite → Go penuh (opsi B)** hanya jika **semua** terpenuhi paling lambat **16 Okt 2026 12:00 WIB**:
+~~Dari **Go-Lite → Go penuh (opsi B)**~~ — **tidak berlaku lagi**: tim memutuskan tidak memakai kredit AMD Developer Cloud (14 Okt 2026). Syarat lama dibiarkan untuk jejak keputusan:
 1. Organizer menjawab tertulis bahwa Gemma via Token Factory **tidak** dihitung, tetapi Gemma yang di-serve sendiri di AMD Developer Cloud dihitung (K4).
 2. Akun AMD Developer Cloud tim sudah bisa membuat droplet MI300X (kredit aktif atau kartu terpasang) (K12).
 3. P0 lulus release gate: Token Factory ≥4/5 chat dan ≥4/4 golden passport dalam 2 run berturut (K14).
