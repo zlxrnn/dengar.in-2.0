@@ -4,6 +4,7 @@ import {
   runCarePassportPipeline,
   needsSoftClarification,
   isUnexplainedComplaint,
+  isUrgentHelpRequest,
   DEFAULT_CLARIFICATION_QUESTION,
 } from '../../services/orchestrator/src/carePassportPipeline.ts';
 import { CARE_PASSPORT_INPUT_OPEN } from '../../packages/prompts/src/carePassport.ts';
@@ -175,14 +176,125 @@ describe('Care Passport pipeline: inference and grounding', () => {
 });
 
 describe('Care Passport pipeline: escalation only', () => {
-  it('escalates to HUMAN_SUPPORT_RECOMMENDED when the model suggests human support', async () => {
-    const provider = mockProvider('amd:test', returns({ ...GROUNDED_DRAFT, humanSupportSuggested: true }), { isAmd: true });
+  it('escalates to HUMAN_SUPPORT_RECOMMENDED when the model suggests human support with a grounded quote', async () => {
+    const provider = mockProvider('amd:test', returns({
+      ...GROUNDED_DRAFT,
+      humanSupportSuggested: true,
+      humanSupportQuote: 'Aku kewalahan dengan tugas kuliah',
+    }), { isAmd: true });
     const result = await runCarePassportPipeline(
       { rawText: STUDENT_STRESS, sanitizedText: STUDENT_STRESS, aiConsent: true },
       { providers: [provider] }
     );
     assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED');
     assert.ok(result.warnings.includes('model_escalation'));
+    assert.ok(!result.warnings.includes('ungrounded_escalation_dropped'));
+  });
+
+  it('SCRUM-44: a model escalation without a grounded quote is dropped, the passport is still returned', async () => {
+    const provider = mockProvider('amd:test', returns({ ...GROUNDED_DRAFT, humanSupportSuggested: true }), { isAmd: true });
+    const result = await runCarePassportPipeline(
+      { rawText: STUDENT_STRESS, sanitizedText: STUDENT_STRESS, aiConsent: true },
+      { providers: [provider] }
+    );
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.ok(result.warnings.includes('ungrounded_escalation_dropped'));
+    assert.ok(!result.warnings.includes('model_escalation'));
+    assert.equal(result.passport.concerns.length, 1);
+  });
+
+  it('SCRUM-44: a paraphrased escalation quote is dropped like any other ungrounded claim', async () => {
+    const provider = mockProvider('amd:test', returns({
+      ...GROUNDED_DRAFT,
+      humanSupportSuggested: true,
+      humanSupportQuote: 'aku sangat kewalahan dan tidak sanggup lagi',
+    }), { isAmd: true });
+    const result = await runCarePassportPipeline(
+      { rawText: STUDENT_STRESS, sanitizedText: STUDENT_STRESS, aiConsent: true },
+      { providers: [provider] }
+    );
+    assert.equal(result.state, 'READY_FOR_USER_REVIEW');
+    assert.ok(result.warnings.includes('ungrounded_escalation_dropped'));
+  });
+
+  it('SCRUM-44 safety net: an ungrounded model escalation changes nothing when the engine already flagged high distress', async () => {
+    const text = 'Aku udah nggak kuat lagi. Tiap hari nangis, nggak bisa kerja.';
+    const provider = mockProvider('amd:test', returns({
+      concerns: [{ value: 'Menangis setiap hari', source: 'user_input', sourceQuote: 'Tiap hari nangis' }],
+      humanSupportSuggested: true,
+    }), { isAmd: true });
+    const result = await runCarePassportPipeline(
+      { rawText: text, sanitizedText: text, aiConsent: true },
+      { providers: [provider] }
+    );
+    assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED');
+    assert.ok(result.warnings.includes('deterministic_high_distress'));
+    assert.ok(result.warnings.includes('ungrounded_escalation_dropped'), 'the drop is still recorded for audit');
+  });
+
+  it('SCRUM-44: passive ideation (ID) is deterministic high, so HUMAN_SUPPORT is locked even if the model says false', async () => {
+    const text = 'Akhir-akhir ini aku ngerasa nggak berguna dan kepikiran semua orang lebih baik tanpa aku. Aku nggak punya rencana apa-apa.';
+    const provider = mockProvider('amd:test', returns({
+      concerns: [{ value: 'Merasa tidak berguna', source: 'user_input', sourceQuote: 'ngerasa nggak berguna' }],
+      humanSupportSuggested: false,
+    }), { isAmd: true });
+    const result = await runCarePassportPipeline(
+      { rawText: text, sanitizedText: text, aiConsent: true },
+      { providers: [provider] }
+    );
+    assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED', 'passive ideation never reaches the review screen unflagged');
+    assert.ok(result.warnings.includes('deterministic_high_distress'));
+    assert.equal(provider.calls.length, 1, 'high (not crisis) still produces a draft');
+  });
+
+  it('SCRUM-44: passive ideation (EN) is deterministic high as well', async () => {
+    const text = 'I keep thinking I wish I could disappear forever. I have no plan, I am just tired of everything.';
+    const provider = mockProvider('amd:test', returns({
+      concerns: [{ value: 'Tired of everything', source: 'user_input', sourceQuote: 'tired of everything' }],
+      humanSupportSuggested: false,
+    }), { isAmd: true });
+    const result = await runCarePassportPipeline(
+      { rawText: text, sanitizedText: text, aiConsent: true },
+      { providers: [provider] }
+    );
+    assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED');
+    assert.ok(result.warnings.includes('deterministic_high_distress'));
+  });
+
+  it('SCRUM-44: an explicit English request for emergency help opens IMMEDIATE_HELP_SCREEN without a model call', async () => {
+    for (const text of [
+      'I need emergency help right now. I am in danger at home and I cannot stay here tonight.',
+      "I'm not safe here, my partner is threatening me.",
+      'Please connect me to emergency services.',
+    ]) {
+      const provider = mockProvider('amd:test', returns(GROUNDED_DRAFT), { isAmd: true });
+      const result = await runCarePassportPipeline(
+        { rawText: text, sanitizedText: text, aiConsent: true },
+        { providers: [provider] }
+      );
+      assert.equal(result.state, 'IMMEDIATE_HELP_SCREEN', text);
+      assert.equal(provider.calls.length, 0, text);
+      assert.ok(result.warnings.includes('urgent_help_requested'), text);
+    }
+  });
+
+  it('isUrgentHelpRequest: English explicit requests match, everyday "help" and idioms do not', () => {
+    for (const text of [
+      'I need emergency help right now.',
+      'I need urgent help, I am in danger.',
+      'i am in danger',
+      "I'm not safe at home",
+      'I’m not safe tonight', // curly apostrophe
+      'Connect me to crisis support please',
+    ]) assert.equal(isUrgentHelpRequest(text), true, text);
+    for (const text of [
+      'I need help now with my thesis, the deadline is tomorrow.',
+      'I would rather die than present at the all-hands tomorrow.',
+      'This thesis is killing me.',
+      'My safety net is my savings, I am not in debt yet.',
+      'It is not safe to assume the client will pay on time.',
+      'Can you help me prepare questions for my first consultation?',
+    ]) assert.equal(isUrgentHelpRequest(text), false, text);
   });
 
   it('a model claiming no risk cannot downgrade a deterministic high-distress flag', async () => {
@@ -338,6 +450,7 @@ describe('Care Passport pipeline: soft clarification when only the concern is kn
       concerns: [{ value: 'Sering merasa tidak baik', source: 'user_input', sourceQuote: 'sering ngerasa nggak baik' }],
       clarificationQuestion: 'Perasaan tidak baik itu paling sering muncul kapan?',
       humanSupportSuggested: true,
+      humanSupportQuote: 'sering ngerasa nggak baik',
     });
     assert.equal(result.state, 'HUMAN_SUPPORT_RECOMMENDED');
     assert.equal(result.clarificationQuestion, undefined);

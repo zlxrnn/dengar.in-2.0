@@ -12,10 +12,10 @@
     {
       "source": "cases.v1.jsonl",
       "artifact": "cases.v1.pb.zst",
-      "sourceBytes": 41714,
-      "artifactBytes": 9561,
-      "sourceSha256": "732d97db7da55a9691d74f702284999c3b21a389fbc36863f7de68ffde4272a5",
-      "artifactSha256": "0ec5e326577db08dfc0e2f0e9ed64810feed22b22c22062980806561ae312eb6"
+      "sourceBytes": 41750,
+      "artifactBytes": 9602,
+      "sourceSha256": "60c6ff95f9be90bd3b79306661e5592a89669a47b2bb75fef9797610a85593d8",
+      "artifactSha256": "44039562637a1e9b37246d174da48b203f9ce8ea7f6116a69303b272bd4191df"
     }
   ]
 }

@@ -65,12 +65,19 @@ const ADULT_AGE_BRACKET = '18-29';
 export const DEFAULT_CLARIFICATION_QUESTION =
   'Boleh ceritakan sedikit lebih jelas, hal apa yang paling ingin kamu bicarakan saat konsultasi nanti?';
 
-/** An explicit ask for urgent human help is honoured without any model judgement. */
+/**
+ * An explicit ask for urgent human help is honoured without any model
+ * judgement. Indonesian forms since AMD-05; English forms added for SCRUM-44
+ * (dataset case v1-urgent-04, approved by the Safety owner): "I need
+ * emergency/urgent/immediate help", "I am in danger", "I'm not safe",
+ * "connect me to emergency services". Deliberately narrow: "I need help now
+ * with my thesis" must not open the emergency screen.
+ */
 const URGENT_HELP_REQUEST =
-  /\b(?:butuh|perlu|minta|tolong(?:in)?)\s+(?:bantuan\s+)?(?:darurat|segera|sekarang\s+juga)\b|\b(?:aku|saya|gue|gw)\s+(?:sedang\s+|lagi\s+)?(?:dalam\s+)?bahaya\b|\bhubungkan\s+(?:aku|saya)\s+(?:ke|dengan)\s+(?:bantuan|layanan)\s+darurat\b/iu;
+  /\b(?:butuh|perlu|minta|tolong(?:in)?)\s+(?:bantuan\s+)?(?:darurat|segera|sekarang\s+juga)\b|\b(?:aku|saya|gue|gw)\s+(?:sedang\s+|lagi\s+)?(?:dalam\s+)?bahaya\b|\bhubungkan\s+(?:aku|saya)\s+(?:ke|dengan)\s+(?:bantuan|layanan)\s+darurat\b|\bi\s+(?:really\s+|urgently\s+)?need\s+(?:emergency|urgent|immediate)\s+help\b|\b(?:i\s+am|i'm|im)\s+(?:currently\s+|really\s+)?(?:in\s+danger|not\s+safe)\b|\b(?:connect|put)\s+me\s+(?:through\s+)?to\s+(?:emergency|crisis)\s+(?:services?|help|support)\b/iu;
 
 export function isUrgentHelpRequest(text: string): boolean {
-  return URGENT_HELP_REQUEST.test(text.normalize('NFKC'));
+  return URGENT_HELP_REQUEST.test(text.normalize('NFKC').replace(/[‘’ʼ′]/g, "'"));
 }
 
 /**

@@ -67,6 +67,8 @@ function mockProvider() {
     async generate({ userPrompt }) {
       const story = userPrompt.split('<<<CERITA_PENGGUNA>>>')[1]?.split('<<<AKHIR_CERITA_PENGGUNA>>>')[0]?.trim() ?? '';
       const quote = story.split(/(?<=[.!?])\s+/)[0]?.slice(0, 120) ?? story;
+      // SCRUM-44: an escalation must quote the user's sentence, like the real prompt asks.
+      const reason = story.match(/[^.!?]*(?:panik|hopeless|beban|nggak keluar kamar|cannot eat|tidak makan)[^.!?]*/i)?.[0]?.trim();
       const draft = {
         version: 1,
         concerns: quote ? [{ value: 'Hal yang diceritakan', source: 'user_input', sourceQuote: quote }] : [],
@@ -76,7 +78,8 @@ function mockProvider() {
         questionsForProfessional: ['Apa langkah pertama yang bisa saya coba?'],
         unknowns: ['Sejak kapan hal ini dirasakan', 'Dampak pada aktivitas harian'],
         clarificationQuestion: story.length < 80 ? 'Boleh ceritakan hal apa yang paling terasa berat belakangan ini?' : undefined,
-        humanSupportSuggested: /panik|hopeless|beban|nggak keluar kamar|cannot eat|tidak makan/i.test(story),
+        humanSupportSuggested: Boolean(reason),
+        ...(reason ? { humanSupportQuote: reason } : {}),
       };
       return { rawText: JSON.stringify(draft) };
     },

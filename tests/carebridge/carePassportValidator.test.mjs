@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CARE_PASSPORT_DISCLAIMER,
+  UNGROUNDED_ESCALATION_WARNING,
   UNKNOWN_LABELS,
   isGroundedQuote,
   normalizeForGrounding,
@@ -335,10 +336,63 @@ describe('validateCarePassportDraft — clarification and escalation', () => {
     }
   });
 
-  it('lets the model escalate toward human support but defaults to false', () => {
-    assert.equal(accept({ concerns: [], humanSupportSuggested: true }, input).humanSupportSuggested, true);
+  it('defaults humanSupportSuggested to false and ignores non-boolean values', () => {
     assert.equal(accept({ concerns: [], humanSupportSuggested: 'yes' }, input).humanSupportSuggested, false);
     assert.equal(accept({ concerns: [] }, input).humanSupportSuggested, false);
+    const explicitFalse = accept({ concerns: [], humanSupportSuggested: false, humanSupportQuote: 'entah kenapa' }, input);
+    assert.equal(explicitFalse.humanSupportSuggested, false);
+    assert.equal(explicitFalse.humanSupportQuote, undefined);
+    assert.ok(!explicitFalse.warnings.includes(UNGROUNDED_ESCALATION_WARNING));
+  });
+});
+
+describe('validateCarePassportDraft — grounded escalation (SCRUM-44)', () => {
+  const input = 'Sudah seminggu aku hampir nggak keluar kamar. Nggak mandi, nggak makan teratur. Aku merasa jadi beban buat semua orang.';
+
+  it('keeps humanSupportSuggested: true when humanSupportQuote is a verbatim quote of the sanitized text', () => {
+    const result = accept(
+      { concerns: [], humanSupportSuggested: true, humanSupportQuote: 'hampir nggak keluar kamar' },
+      input
+    );
+    assert.equal(result.humanSupportSuggested, true);
+    assert.equal(result.humanSupportQuote, 'hampir nggak keluar kamar');
+    assert.ok(!result.warnings.includes(UNGROUNDED_ESCALATION_WARNING));
+  });
+
+  it('grounding ignores case, whitespace and smart quotes like every other quote', () => {
+    const result = accept(
+      { concerns: [], humanSupportSuggested: true, humanSupportQuote: '  Nggak   MANDI, nggak makan teratur ' },
+      input
+    );
+    assert.equal(result.humanSupportSuggested, true);
+  });
+
+  it('treats true WITHOUT a quote as false and records ungrounded_escalation_dropped', () => {
+    const result = accept({ concerns: [], humanSupportSuggested: true }, input);
+    assert.equal(result.humanSupportSuggested, false);
+    assert.equal(result.humanSupportQuote, undefined);
+    assert.ok(result.warnings.includes(UNGROUNDED_ESCALATION_WARNING));
+  });
+
+  it('treats true with a paraphrased or invented quote as false', () => {
+    for (const quote of ['tidak keluar kamar selama seminggu', 'aku ingin menyakiti diri', 'ab', 42, null, ['hampir nggak keluar kamar']]) {
+      const result = accept({ concerns: [], humanSupportSuggested: true, humanSupportQuote: quote }, input);
+      assert.equal(result.humanSupportSuggested, false, JSON.stringify(quote));
+      assert.ok(result.warnings.includes(UNGROUNDED_ESCALATION_WARNING), JSON.stringify(quote));
+    }
+  });
+
+  it('a quote that only exists across two segments does not ground an escalation', () => {
+    const segments = 'Aku capek banget.\n¶\nSemua orang lebih baik tanpa aku.';
+    const across = accept({ concerns: [], humanSupportSuggested: true, humanSupportQuote: 'capek banget. Semua orang' }, segments);
+    assert.equal(across.humanSupportSuggested, false);
+    const inside = accept({ concerns: [], humanSupportSuggested: true, humanSupportQuote: 'semua orang lebih baik tanpa aku' }, segments);
+    assert.equal(inside.humanSupportSuggested, true);
+  });
+
+  it('does not count a dropped escalation as a dropped claim (it is a warning, not a fact)', () => {
+    const result = accept({ concerns: [], humanSupportSuggested: true }, input);
+    assert.equal(result.droppedClaims, 0);
   });
 });
 

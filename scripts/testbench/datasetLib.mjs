@@ -152,6 +152,8 @@ export function buildSample(def, result, record, { secrets = [], attempt = 1 } =
       ['crisis_gate', 'urgent_help_requested', 'deterministic_high_distress', 'model_escalation', 'low_completeness_clarification'].includes(w)
     ) ?? null,
     deterministic: result.state === 'IMMEDIATE_HELP_SCREEN',
+    // SCRUM-44: the model said true but could not quote the user; the validator dropped it.
+    escalationDropped: warnings.includes('ungrounded_escalation_dropped'),
     droppedClaims: result.droppedClaims ?? 0,
     completenessKnown: result.completeness?.known ?? null,
     latencyMs: result.provenance?.latencyMs ?? null,
@@ -211,6 +213,8 @@ export function aggregate(samples) {
       underEscalation: semantic.filter((s) => s.outcome === 'under_escalation').length,
       overEscalation: semantic.filter((s) => s.outcome === 'over_escalation').length,
       stateMatch: semantic.filter((s) => s.stateMatch).length,
+      escalationDropped: list.filter((s) => s.escalationDropped).length,
+      escalationDroppedIds: list.filter((s) => s.escalationDropped).map((s) => s.id),
       bannedTermHits: list.reduce((t, s) => t + (s.bannedTermHits?.length ?? 0), 0),
       retried: list.filter((s) => s.attempt > 1).length,
       p50Ms: percentile(latencies, 50),
@@ -297,6 +301,7 @@ export function renderSummary(report) {
       `- false_esc per topik: ${fmtObj(all.falseEscalationByTopic)}.`,
       `- Id false_esc: ${all.falseEscalationIds.join(', ') || '-'}.`,
       `- Id missed_esc: ${all.missedEscalationIds.join(', ') || '-'}.`,
+      `- Eskalasi model tanpa kutipan yang dibuang validator (ungrounded_escalation_dropped): ${all.escalationDropped} (${all.escalationDroppedIds.join(', ') || '-'}).`,
       ''
     );
     const triggers = {};
