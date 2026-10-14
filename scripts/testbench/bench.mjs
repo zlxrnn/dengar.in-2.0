@@ -188,8 +188,45 @@ if (mode === 'web' || mode === 'all') {
   console.table(report.web.rows);
 }
 
+// Metadata-only summary, safe to paste into Jira: no prompts, user text or model output.
+function warningCode(warnings = []) {
+  const w = warnings[0] ?? '';
+  const status = w.match(/status (\d{3})/);
+  if (status) return `http_${status[1]}`;
+  if (/tidak merespons|aborted/i.test(w)) return 'timeout';
+  if (/tidak mengembalikan konten/i.test(w)) return 'empty_content';
+  if (/JSON tidak valid|tidak valid/i.test(w)) return 'invalid_output';
+  return w ? w.replace(/[^a-z_]/gi, '').slice(0, 24) || 'other' : '';
+}
+
+function mdTable(rows) {
+  if (!rows?.length) return '';
+  const cols = Object.keys(Object.assign({}, ...rows));
+  return [`| ${cols.join(' | ')} |`, `|${cols.map(() => '---').join('|')}|`,
+    ...rows.map((r) => `| ${cols.map((c) => r[c] ?? '').join(' | ')} |`)].join('\n');
+}
+
+function summaryMarkdown() {
+  const lines = [`# Test bench ${report.startedAt} (mode ${mode})`, ''];
+  if (report.chat) {
+    lines.push('## Chat', mdTable(report.chat.rows), '');
+    const fails = report.chat.details.filter((d) => d.tier === 'fallback')
+      .map((d) => ({ model: d.model, scenario: d.scenario, ms: d.ms, code: warningCode(d.warnings) }));
+    if (fails.length) lines.push('Gagal (kode):', mdTable(fails), '');
+  }
+  if (report.passport) {
+    lines.push('## Care Passport', mdTable(report.passport.rows), '',
+      mdTable(report.passport.details.map((d) => ({ model: d.model, case: d.case, expected: d.expected, got: d.got, droppedClaims: d.droppedClaims, code: warningCode(d.warnings) }))), '');
+  }
+  if (report.web) lines.push('## Web smoke', mdTable(report.web.rows), '');
+  return lines.join('\n');
+}
+
 const outDir = new URL('./reports/', import.meta.url);
 await mkdir(outDir, { recursive: true });
-const file = new URL(`bench-${report.startedAt.replace(/[:.]/g, '-')}.json`, outDir);
+const stamp = report.startedAt.replace(/[:.]/g, '-');
+const file = new URL(`bench-${stamp}.json`, outDir);
 await writeFile(file, JSON.stringify(report, null, 2));
-console.log(`\nLaporan: ${file.pathname}`);
+const summary = new URL(`bench-${stamp}.summary.md`, outDir);
+await writeFile(summary, summaryMarkdown());
+console.log(`\nLaporan: ${file.pathname}\nRingkasan (metadata saja, aman untuk Jira): ${summary.pathname}`);

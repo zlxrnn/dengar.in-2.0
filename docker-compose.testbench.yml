@@ -70,5 +70,4 @@ services:
       - ./packages:/app/packages:ro
       - ./services:/app/services:ro
       - ./tests:/app/tests:ro
-      - ./scripts/testbench/bench.mjs:/app/scripts/testbench/bench.mjs:ro
-      - ./scripts/testbench/reports:/app/scripts/testbench/reports
+      - ./scripts/testbench:/app/scripts/testbench

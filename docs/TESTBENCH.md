@@ -48,7 +48,19 @@ npm run testbench:down
 ```
 
 Laporan JSON per run ditulis ke `scripts/testbench/reports/` (gitignored,
-berisi output model dari input sintetis).
+berisi output model dari input sintetis), plus `*.summary.md` yang hanya berisi
+metadata (model, case, expected/got, latensi, kode error) dan aman ditempel ke Jira.
+
+### Uji gangguan Care Passport
+
+```bash
+bash scripts/testbench/faults.sh
+```
+
+Menyalakan satu container web per skenario (key salah, model salah, mock 429/503,
+endpoint menggantung) lalu memanggil `POST /api/care-passport`. Kasus krisis dan
+consent ditolak diarahkan ke mock yang menggantung dan mencatat request: bila
+provider terpanggil, request itu muncul di log mock dan respons tertahan 12 dtk.
 
 ## Catatan
 
@@ -61,4 +73,9 @@ berisi output model dari input sintetis).
   (`finish_reason=length`). `chat_template_kwargs: {enable_thinking: false}`
   menghilangkan reasoning, tapi satu Care Passport tetap ±26 dtk, dan chat ±26–30 dtk
   (di atas anggaran giliran 18 dtk).
+- Gateway bench untuk TokenFactory adalah `https://developer.amd.com.cn/radeon/api/v1`.
+  Belum diverifikasi apakah ini endpoint yang sama dengan yang dipakai SCRUM-13
+  (AMD_SETUP §9.2 A2).
+- Dengan `AMD_TIMEOUT_MS=12000` (bawaan produksi) Gemma-4-31B-IT sering timeout di
+  Care Passport (14 Okt: 12–20 dtk per passport). Pertimbangkan 25000 untuk demo.
 - Postgres tidak disertakan: tanpa `DATABASE_URL` aplikasi memakai penyimpanan in-memory.
