@@ -4,7 +4,9 @@ import { Schibsted_Grotesk } from 'next/font/google';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { ACCESSIBILITY_INIT_SCRIPT } from '@/components/ui/AccessibilityMenu';
+// Dari modul tanpa 'use client': ekspor berkas Client Component menjadi proksi
+// Client Reference di Server Component, bukan string (BUG-20261014-01).
+import { ACCESSIBILITY_INIT_SCRIPT } from '@/components/ui/accessibilityInitScript';
 import { LANGUAGE_INIT_SCRIPT } from '@/i18n/language';
 import { SkipLink } from '@/components/SkipLink';
 

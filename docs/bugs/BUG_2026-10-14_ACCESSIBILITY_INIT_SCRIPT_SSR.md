@@ -4,7 +4,7 @@
 - **Tanggal Ditemukan**: 14 Oktober 2026
 - **Komponen Terdampak**: `apps/web/src/app/layout.tsx` & `apps/web/src/components/ui/AccessibilityMenu.tsx`
 - **Tingkat Keparahan**: Sedang (Medium) — Fungsionalitas aksesibilitas awal terhambat dan mencemari HTML `<head>` dengan error runtime Next.js.
-- **Status**: Teridentifikasi / Menunggu Penerapan Perbaikan
+- **Status**: Diperbaiki (14 Oktober 2026)
 
 ---
 
@@ -70,4 +70,19 @@ export const ACCESSIBILITY_INIT_SCRIPT = `(function(){try{var s=JSON.parse(local
 ```
 
 Kemudian `layout.tsx` dan `AccessibilityMenu.tsx` keduanya mengimpor konstanta tersebut dari `apps/web/src/lib/accessibilityInit.ts`.
+
+---
+
+## 5. Perbaikan yang Diterapkan (14 Oktober 2026)
+
+Sesuai rencana di §4, dengan lokasi berkas disesuaikan agar tetap di wilayah a11y (`components/ui/`):
+
+1. **Modul baru tanpa `'use client'`**: `apps/web/src/components/ui/accessibilityInitScript.ts` berisi `ACCESSIBILITY_STORAGE_KEY`, `ACCESSIBILITY_TOGGLES`, dan `ACCESSIBILITY_INIT_SCRIPT` (isi script tidak berubah).
+2. **`apps/web/src/app/layout.tsx`**: impor `ACCESSIBILITY_INIT_SCRIPT` dialihkan ke `@/components/ui/accessibilityInitScript`.
+3. **`apps/web/src/components/ui/AccessibilityMenu.tsx`**: tidak lagi mengekspor konstanta tersebut; mengimpor `ACCESSIBILITY_STORAGE_KEY` dan `ACCESSIBILITY_TOGGLES` dari modul yang sama sehingga tetap satu sumber kebenaran.
+4. **Uji regresi statis** `tests/infra/serverClientImports.test.mjs` (ikut `npm run test:infra`): memastikan berkas server di `apps/web/src/app/` hanya mengimpor komponen (PascalCase) dari modul `'use client'`, dan `layout.tsx` membaca `ACCESSIBILITY_INIT_SCRIPT` dari modul tanpa `'use client'`. Pada kode sebelum perbaikan, uji ini gagal dengan pesan `app/layout.tsx: { ACCESSIBILITY_INIT_SCRIPT } from '@/components/ui/AccessibilityMenu'`.
+
+**Verifikasi** (image Docker `dengarin-testbench-bench`): `tsc --noEmit` dan `next lint` bersih; `next build` lalu `next start`, HTML `GET /` tidak lagi mengandung `Attempted to call`, dan `<head><script>` berisi `localStorage.getItem('dengarin:aksesibilitas')` beserta seluruh penerapan kelas `a11y-*`.
+
+Pemindaian `apps/web/src` tidak menemukan impor nilai non-komponen lain dari modul `'use client'` ke berkas server; `layout.tsx` adalah satu-satunya kasus.
 
