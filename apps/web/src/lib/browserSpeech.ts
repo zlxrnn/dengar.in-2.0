@@ -325,6 +325,47 @@ export function speechRecognitionErrorMessage(errorCode: string, lang: Language 
   }
 }
 
+export interface MicrophonePermissionTarget {
+  navigator?: {
+    permissions?: { query(descriptor: { name: string }): Promise<{ state: string }> };
+  };
+}
+
+/**
+ * Asks the Permissions API whether the microphone is already blocked. Resolves
+ * false whenever the API is missing, rejects, or answers anything other than
+ * 'denied' (Safari/iOS do not know the 'microphone' descriptor), so it never
+ * blocks a browser that could still prompt or listen.
+ */
+export async function isMicrophonePermissionDenied(
+  target: MicrophonePermissionTarget | undefined
+): Promise<boolean> {
+  try {
+    const status = await target?.navigator?.permissions?.query({ name: 'microphone' });
+    return status?.state === 'denied';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Runs `start` unless the microphone is already blocked, in which case only
+ * `onDenied` runs. Some browsers never fire the 'not-allowed' recognition error
+ * for an already-denied microphone, which would leave the UI "listening" forever.
+ */
+export async function startUnlessMicrophoneDenied(
+  target: MicrophonePermissionTarget | undefined,
+  start: () => void,
+  onDenied: () => void
+): Promise<'started' | 'denied'> {
+  if (await isMicrophonePermissionDenied(target)) {
+    onDenied();
+    return 'denied';
+  }
+  start();
+  return 'started';
+}
+
 export function speakOneAtATime(
   speechSynthesis: Pick<SpeechSynthesis, 'cancel' | 'speak'>,
   utterance: SpeechSynthesisUtterance

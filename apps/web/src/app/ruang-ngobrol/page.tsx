@@ -16,6 +16,7 @@ import {
   selectVoiceForLanguage,
   speakExpressively,
   speechRecognitionErrorMessage,
+  startUnlessMicrophoneDenied,
   type BrowserSpeechRecognition,
 } from '@/lib/browserSpeech';
 import {
@@ -424,42 +425,51 @@ export default function RuangNgobrolPage() {
       return;
     }
 
-    cancelSpeech(window.speechSynthesis);
-    stopRoomAudio();
-    stopRecognition(true);
     const generation = generationRef.current;
-    const recognition = new Recognition();
-    recognition.lang = LOCALE_TAG[langRef.current];
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => {
-      if (generation !== generationRef.current || stateRef.current !== 'LISTENING') return;
-      const transcript = getFinalTranscript(event);
-      // Interim results are intentionally ignored: they never enter memory or fetch.
-      if (!transcript) return;
-      void submitFinalTurn(transcript, generation);
-    };
-    recognition.onerror = (event) => {
-      if (generation !== generationRef.current || !sessionActiveRef.current || stateRef.current !== 'LISTENING') return;
-      recognitionRef.current = null;
-      processingRef.current = false;
-      setStatusText(speechRecognitionErrorMessage(event.error, langRef.current));
+    // Some browsers never fire 'not-allowed' for an already-blocked microphone,
+    // so an already-denied permission goes straight to the denial message.
+    void startUnlessMicrophoneDenied(window, () => {
+      if (generation !== generationRef.current || !sessionActiveRef.current || mutedRef.current || processingRef.current) return;
+      cancelSpeech(window.speechSynthesis);
+      stopRoomAudio();
+      stopRecognition(true);
+      const recognition = new Recognition();
+      recognition.lang = LOCALE_TAG[langRef.current];
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = (event) => {
+        if (generation !== generationRef.current || stateRef.current !== 'LISTENING') return;
+        const transcript = getFinalTranscript(event);
+        // Interim results are intentionally ignored: they never enter memory or fetch.
+        if (!transcript) return;
+        void submitFinalTurn(transcript, generation);
+      };
+      recognition.onerror = (event) => {
+        if (generation !== generationRef.current || !sessionActiveRef.current || stateRef.current !== 'LISTENING') return;
+        recognitionRef.current = null;
+        processingRef.current = false;
+        setStatusText(speechRecognitionErrorMessage(event.error, langRef.current));
+        transitionTo('ERROR');
+      };
+      recognition.onend = () => {
+        if (recognitionRef.current === recognition) recognitionRef.current = null;
+      };
+      recognitionRef.current = recognition;
+      if (!transitionTo('LISTENING')) return;
+      try {
+        recognition.start();
+        setStatusKey('listening');
+      } catch {
+        recognitionRef.current = null;
+        setStatusKey('startFailed');
+        transitionTo('ERROR');
+      }
+    }, () => {
+      if (generation !== generationRef.current || !sessionActiveRef.current) return;
+      setStatusText(speechRecognitionErrorMessage('not-allowed', langRef.current));
       transitionTo('ERROR');
-    };
-    recognition.onend = () => {
-      if (recognitionRef.current === recognition) recognitionRef.current = null;
-    };
-    recognitionRef.current = recognition;
-    if (!transitionTo('LISTENING')) return;
-    try {
-      recognition.start();
-      setStatusKey('listening');
-    } catch {
-      recognitionRef.current = null;
-      setStatusKey('startFailed');
-      transitionTo('ERROR');
-    }
+    });
   }, [endRoom, sessionHasExpired, setStatusKey, setStatusText, stopRecognition, stopRoomAudio, submitFinalTurn, transitionTo]);
 
   useEffect(() => {

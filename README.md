@@ -232,6 +232,8 @@ ADMIN_SEED_USERNAME=admin ADMIN_SEED_PASSWORD=strongpassword npm run db:seed-adm
 ### Docker
 A production image is defined in [`apps/web/Dockerfile`](apps/web/Dockerfile).
 
+**Local test bench with real models.** Put your keys in `.env.testbench` (gitignored; template in [`docs/TESTBENCH.md`](docs/TESTBENCH.md)), then run `npm run testbench:up` (web + Redis on port 3000) and `npm run testbench` (chat, Care Passport golden cases and web smoke against DeepSeek and AMD Token Factory). `bash scripts/testbench/faults.sh` checks Care Passport failure handling (401, 404, 429, 503, timeout, crisis, declined consent). Reports are written to `scripts/testbench/reports/`, including a metadata-only `*.summary.md`.
+
 ## Running CareBridge on AMD
 
 Two paths satisfy the "meaningful part of the workload on AMD" rule. Both work through the same adapter without code changes:

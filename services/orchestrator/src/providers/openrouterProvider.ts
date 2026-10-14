@@ -1,6 +1,15 @@
 import type { LLMProvider, LLMProviderRequest, LLMProviderResponse } from './types.ts';
 
-const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+const DEFAULT_OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+
+// OPENROUTER_BASE_URL points this tier at any OpenAI-compatible gateway (e.g.
+// OpenCode Zen for the local test bench). Accepts a `/v1` root or a full
+// `/chat/completions` URL.
+function resolveEndpoint(raw: string | undefined): string {
+  const base = (raw ?? '').trim().replace(/\/+$/, '');
+  if (!base) return DEFAULT_OPENROUTER_ENDPOINT;
+  return /\/chat\/completions$/i.test(base) ? base : `${base}/chat/completions`;
+}
 
 // Overridable via OPENROUTER_MODEL. Defaults to a free-tier ("$0 :free"
 // suffix) model so this "second brain" fallback costs nothing to run.
@@ -23,7 +32,8 @@ interface OpenrouterChatCompletion {
  */
 export function createOpenrouterProvider(
   apiKey: string | undefined = process.env.OPENROUTER_API_KEY,
-  model: string = process.env.OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL
+  model: string = process.env.OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL,
+  endpoint: string = resolveEndpoint(process.env.OPENROUTER_BASE_URL)
 ): LLMProvider {
   return {
     id: `openrouter:${model}`,
@@ -59,7 +69,7 @@ export function createOpenrouterProvider(
           ];
 
       try {
-        const response = await fetch(OPENROUTER_ENDPOINT, {
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers,
           body: JSON.stringify({

@@ -45,6 +45,9 @@ const id = {
   helpHint: 'Kontak darurat dan psikolog resmi, kapan pun kamu butuh.',
   forum: 'Ruang cerita',
   forumHint: 'Saling menguatkan dengan sesama.',
+  carePassport: 'Catatan Konsultasi',
+  carePassportHint: 'Mau ke psikolog atau dokter? Rangkum ceritamu jadi catatan yang kamu periksa sendiri. AI hanya dipakai kalau kamu setuju. Untuk usia 18+.',
+  carePassportAction: 'Siapkan catatan',
   recovery: 'Simpan atau pulihkan sesi dengan kunci pemulihan',
   crisis: 'Butuh bantuan sekarang? Healing119: 119 ext 8',
 };
@@ -94,6 +97,9 @@ const en: typeof id = {
   helpHint: 'Emergency contacts and official psychologists, whenever you need them.',
   forum: 'Story room',
   forumHint: 'Lift each other up.',
+  carePassport: 'Consultation Notes',
+  carePassportHint: 'Seeing a psychologist or doctor? Turn your story into notes you check yourself. AI is only used if you agree. For ages 18+.',
+  carePassportAction: 'Prepare notes',
   recovery: 'Save or restore your session with a recovery key',
   crisis: 'Need help right now? Healing119: 119 ext 8',
 };

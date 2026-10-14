@@ -1,4 +1,4 @@
-import type { CarePassport, CarePassportResult, CarePassportSegment } from '@dengarin/types';
+import type { CarePassport, CarePassportCompleteness, CarePassportResult, CarePassportSegment } from '@dengarin/types';
 import { evaluateCrisisInput } from '@dengarin/crisis-engine';
 import { buildCarePassportSystemPrompt, buildCarePassportUserPrompt } from '@dengarin/prompts';
 import { attributeEvidence, computeCompleteness, joinSegments, validateCarePassportDraft } from '@dengarin/validator';
@@ -43,7 +43,7 @@ export interface CarePassportPipelineOptions {
   now?: () => number;
 }
 
-const DEFAULT_TIMEOUT_MS = 12000;
+const DEFAULT_TIMEOUT_MS = 30000;
 
 /**
  * Sensitive intake only goes to the team's AMD endpoint by default. Third-party
@@ -71,6 +71,53 @@ const URGENT_HELP_REQUEST =
 
 export function isUrgentHelpRequest(text: string): boolean {
   return URGENT_HELP_REQUEST.test(text.normalize('NFKC'));
+}
+
+/**
+ * The user says in their own words that they cannot name why they feel this
+ * way ("entah kenapa", "nggak tahu kenapa", "tanpa sebab yang jelas", ...).
+ * This is the operational sign of a vague complaint (rubric case B): a
+ * complaint with a named cause ("stres karena target penjualan") is specific
+ * even when nothing else is known yet. Indonesian phrase list, deterministic,
+ * run on the sanitized grounding text only; misses are a documented
+ * limitation and simply fall back to the review screen.
+ */
+const UNKNOWN_CAUSE =
+  /\b(?:entah|bingung|nggak|ngga|gak|ga|tak|tidak|kurang|belum)\s+(?:(?:tahu|tau|jelas|ngerti|paham)\s+)?(?:kenapa|mengapa|sebabnya|alasannya|penyebabnya|apa\s+sebabnya|apa\s+penyebabnya|apa\s+yang\s+salah)\b|\btanpa\s+(?:sebab|alasan|penyebab)(?:\s+(?:yang\s+)?(?:jelas|pasti))?\b|\bentah\s+(?:apa|dari\s+mana)\b/iu;
+
+export function isUnexplainedComplaint(text: string): boolean {
+  return UNKNOWN_CAUSE.test(text.normalize('NFKC'));
+}
+
+/**
+ * Soft clarification (SCRUM-32). Real models quote even a vague sentence
+ * ("sering ngerasa nggak baik") as a grounded concern, so the hard rule
+ * ("concerns empty") never fires for vague stories. This path asks instead
+ * when ALL of the following hold:
+ *   1. the concern is the ONLY known core fact: no daily impact and no
+ *      duration (`completeness.known <= 1`; core facts are concerns,
+ *      dailyImpact, duration);
+ *   2. the user themselves say they cannot name the cause
+ *      (`isUnexplainedComplaint`). Without this, specific stories such as
+ *      case D ("stres karena target penjualan") would be asked too, because
+ *      models tend to ask a question whenever two core facts are missing;
+ *   3. the model asked a question that passed the validator (no diagnosis,
+ *      no medical advice, no percentage). Nothing is invented: no default
+ *      question on this path;
+ *   4. no clarification has been answered yet, so this path asks at most
+ *      once. The UI caps rounds at 3 regardless.
+ * Never a safety downgrade: evaluated only after the escalation checks.
+ */
+export function needsSoftClarification(
+  completeness: CarePassportCompleteness,
+  clarificationQuestion: string | undefined,
+  segments: ReadonlyArray<Pick<CarePassportSegment, 'kind'>>,
+  sanitizedText: string
+): boolean {
+  if (!clarificationQuestion) return false;
+  if (completeness.known > 1) return false;
+  if (!isUnexplainedComplaint(sanitizedText)) return false;
+  return !segments.some((segment) => segment.kind === 'clarification');
 }
 
 function isAmdProvider(provider: LLMProvider): boolean {
@@ -157,11 +204,21 @@ export async function runCarePassportPipeline(
         warnings: [...base.warnings, deterministicHigh ? 'deterministic_high_distress' : 'model_escalation'],
       };
     }
+    //    Clarification is never a safety downgrade: it is only reached once the
+    //    escalation checks above have passed, and the passport is still shown.
     if (passport.concerns.length === 0) {
       return {
         ...base,
         state: 'NEEDS_CLARIFICATION',
         clarificationQuestion: validation.clarificationQuestion ?? DEFAULT_CLARIFICATION_QUESTION,
+      };
+    }
+    if (needsSoftClarification(base.completeness, validation.clarificationQuestion, attributable, sanitizedText)) {
+      return {
+        ...base,
+        state: 'NEEDS_CLARIFICATION',
+        clarificationQuestion: validation.clarificationQuestion!,
+        warnings: [...base.warnings, 'low_completeness_clarification'],
       };
     }
     return { ...base, state: 'READY_FOR_USER_REVIEW' };

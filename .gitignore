@@ -39,3 +39,6 @@ Thumbs.db
 
 # Catatan agen lokal (tidak di-push)
 AGENTS.md
+
+# Laporan test bench lokal (berisi output model)
+scripts/testbench/reports/

@@ -93,8 +93,9 @@ npm run test:redis   # Lolos: 14; Gagal: 0 (dev)
       `[Instrumentation] cache awal terdaftar ke Redis.`
 - [x] Cache terisi **sebelum request halaman pertama** → `redis-cli --scan --pattern 'dengarin:next:*' | wc -l` ≈ jumlah halaman
 - [x] Nama key bersih, tanpa prefiks ganda
-      ✅ `dengarin:next:__sharedTags__`
+      ✅ `dengarin:next:<BUILD_ID>:__sharedTags__` (ber-namespace build — bug QA 14 Okt)
       ❌ `dengarin:next:dengarin:next:__sharedTags__`
+      ❌ `dengarin:next:__sharedTags__` (tanpa BUILD_ID: cache build lama akan disajikan setelah rebuild)
 - [x] `npm run test:redis -- --production` lulus 20/20
 - [x] GET `/resources` melalui runner menyertakan header `x-nextjs-cache: HIT`
 

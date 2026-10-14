@@ -120,6 +120,50 @@ describe('AMD provider — request shape', () => {
   });
 });
 
+describe('AMD provider — max_tokens (SCRUM-34)', () => {
+  /** Runs fn with AMD_MAX_TOKENS set (or unset for undefined), then restores it. */
+  async function withEnv(value, fn) {
+    const saved = process.env.AMD_MAX_TOKENS;
+    if (value === undefined) delete process.env.AMD_MAX_TOKENS;
+    else process.env.AMD_MAX_TOKENS = value;
+    try {
+      return await fn();
+    } finally {
+      if (saved === undefined) delete process.env.AMD_MAX_TOKENS;
+      else process.env.AMD_MAX_TOKENS = saved;
+    }
+  }
+
+  async function sentMaxTokens(config = {}) {
+    const { fetchImpl, calls } = stubFetch(() => jsonResponse(chatBody('x')));
+    await createAmdProvider({ baseUrl: 'http://x', model: 'm', ...config, fetchImpl }).generate(request);
+    return calls[0].body.max_tokens;
+  }
+
+  it('sends 1024 by default', async () => {
+    await withEnv(undefined, async () => assert.equal(await sentMaxTokens(), 1024));
+  });
+
+  it('uses an explicit config value over the env', async () => {
+    await withEnv('2048', async () => assert.equal(await sentMaxTokens({ maxTokens: 4096 }), 4096));
+  });
+
+  it('reads AMD_MAX_TOKENS from the env', async () => {
+    await withEnv('3000', async () => assert.equal(await sentMaxTokens(), 3000));
+  });
+
+  it('falls back to 1024 for an invalid or empty env value', async () => {
+    for (const value of ['', '  ', 'abc', '0', '-5', '1.5', '8193', '99999', '12abc']) {
+      await withEnv(value, async () => assert.equal(await sentMaxTokens(), 1024, `AMD_MAX_TOKENS=${JSON.stringify(value)}`));
+    }
+  });
+
+  it('accepts the 1 and 8192 bounds', async () => {
+    await withEnv('1', async () => assert.equal(await sentMaxTokens(), 1));
+    await withEnv('8192', async () => assert.equal(await sentMaxTokens(), 8192));
+  });
+});
+
 describe('AMD provider — failures', () => {
   it('throws on non-2xx without leaking the API key', async () => {
     const { fetchImpl } = stubFetch(() =>

@@ -226,7 +226,7 @@ export function runOpeningLinesPipeline(
 export function isUrgentHelpRequest(text: string): boolean;
 ```
 
-Default providers for both: `[createAmdProvider()]` when `AMD_BASE_URL` and `AMD_MODEL` are set, otherwise `[]`. Timeout `AMD_TIMEOUT_MS`, default 12000.
+Default providers for both: `[createAmdProvider()]` when `AMD_BASE_URL` and `AMD_MODEL` are set, otherwise `[]`. Timeout `AMD_TIMEOUT_MS`, default 30000.
 
 ### AMD provider (`providers/amdProvider.ts`)
 
@@ -542,7 +542,7 @@ Admin accounts have no signup route — they are provisioned out-of-band via `np
 | `AMD_API_KEY` | same | Bearer key; may be empty only for a loopback endpoint without auth |
 | `AMD_MODEL` | same | Exact model id as listed by `GET /v1/models`; with `AMD_BASE_URL` makes the provider "configured" |
 | `AMD_JSON_MODE` | same | `true` adds `response_format: json_object`; only if `probeAmdEndpoint()` reported `jsonModeOk: true` |
-| `AMD_TIMEOUT_MS` | same | Per-call timeout for Care Passport and opening lines; default 12000 |
+| `AMD_TIMEOUT_MS` | same | Per-call timeout for Care Passport and opening lines; default 30000 |
 | `REDIS_URL` | `apps/web/src/lib/redis.ts` | Optional. Distributed rate limits/slots, forum read cache, ISR cache, and (only with `AI_RESPONSE_CACHE=true`) the AI response cache. Empty = in-memory |
 | `AI_RESPONSE_CACHE` | `apps/web/src/lib/api/aiCache.ts` / `chatHandler.ts` | `true` enables the chat AI response cache (600 s TTL). Anything else, including empty = off (default) |
 | `DENGARIN_DEBIASER` | `services/orchestrator` | `off` / `false` / `0` disables the OpenRouter debiaser pass |

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { cp, mkdtemp, rm, symlink } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
@@ -129,7 +129,13 @@ try {
     const keys = await client.keys('dengarin:next:*');
     assert.ok(keys.length > 0);
     assert.ok(keys.every(key => !key.includes('dengarin:next:dengarin:next:')));
-    pass(`Warm-up ${keys.length} key halaman sebelum request halaman, prefiks bersih`);
+    // Bug QA 14 Okt: key WAJIB ber-namespace BUILD_ID supaya cache build lama
+    // (HTML yang menunjuk chunk 404) tidak dibaca setelah rebuild.
+    const buildId = (await readFile(path.join(cwd, '.next/BUILD_ID'), 'utf8')).trim();
+    assert.ok(buildId, 'BUILD_ID hasil build tersedia');
+    assert.doesNotMatch(a.child.log, /BUILD_ID tidak terbaca/);
+    assert.ok(keys.every(key => key.startsWith(`dengarin:next:${buildId}:`)), `semua key berawalan dengarin:next:${buildId}: — ${keys.join(', ')}`);
+    pass(`Warm-up ${keys.length} key halaman sebelum request halaman, prefiks bersih ber-namespace BUILD_ID`);
     const page = await request(a.base, '/resources');
     assert.equal(page.status, 200);
     assert.equal(page.headers.get('x-nextjs-cache'), 'HIT');
@@ -270,14 +276,20 @@ try {
     assert.deepEqual(await burst(b.base, 15), [...Array(10).fill(200), ...Array(5).fill(429)]);
     pass('Dua instance berbagi kuota: A 20 lolos, B 10 lolos + 5 diblokir');
     // An altered cache value proves B actually reads Redis, not its build files.
-    const pageKey = 'dengarin:next:/resources';
+    const buildId = (await readFile(path.join(cwd, '.next/BUILD_ID'), 'utf8')).trim();
+    const pageKey = `dengarin:next:${buildId}:/resources`;
+    // A leftover entry from a previous build (legacy prefix) must never be served.
+    await client.set('dengarin:next:/resources', 'StaleBuildMustNotBeServed');
     const original = await client.get(pageKey);
     assert.ok(original, 'Key /resources tersedia');
     assert.ok(original.includes('Bantuan'), 'Marker teks halaman tersedia');
     await client.set(pageKey, original.replaceAll('Bantuan', 'RedisSharedProof'));
     const shared = await request(b.base, '/resources');
-    assert.ok((await shared.text()).includes('RedisSharedProof'));
+    const sharedHtml = await shared.text();
+    assert.ok(sharedHtml.includes('RedisSharedProof'));
+    assert.ok(!sharedHtml.includes('StaleBuildMustNotBeServed'), 'key build lama tidak dibaca');
     await client.set(pageKey, original);
+    await client.del('dengarin:next:/resources');
     pass('Instance B membaca isi halaman dari Redis bersama');
     await stop(a.child);
     a = await startApp();

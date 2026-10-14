@@ -113,7 +113,7 @@ Itulah dua masalah yang Redis pecahkan di proyek ini: **state yang tidak dibagi*
 
 | # | Lapisan | File | Isi di Redis | Kalau Redis mati |
 |---|---|---|---|---|
-| 1 | Cache halaman ISR/SSG | `cache-handler.mjs` | `dengarin:next:*` | LRU lokal |
+| 1 | Cache halaman ISR/SSG | `cache-handler.mjs` | `dengarin:next:<BUILD_ID>:*` | LRU lokal |
 | 2 | Rate limit (klien + global) | `lib/api/rateLimit.ts` | `dengarin:ratelimit:client:*`, `…:global:*` | penghitung memori |
 | 3 | Cache jawaban AI | `lib/api/aiCache.ts` | `dengarin:ai:<sha256>` | cache miss, panggil AI |
 | 4 | Cache feed forum publik | `lib/api/forumCache.ts` | `dengarin:forum:posts:<versi>:<hash>`, `dengarin:forum:replies:<cerita>:<versi>:<hash>`, `dengarin:forum:version:*` | baca langsung dari database |
@@ -260,6 +260,35 @@ createCompositeHandler({
 });
 ```
 
+### Key diberi namespace per build (bug QA 14 Okt)
+
+**Gejala:** image web di-build ulang lalu di-restart sementara Redis tetap hidup.
+`/consent` dijawab `x-nextjs-cache: HIT` dengan HTML **build lama** yang menunjuk
+chunk JS/CSS berhash lama → semua chunk 404, seluruh situs tampil tanpa style dan
+tidak interaktif.
+
+**Sebab:** Redis hidup lebih lama daripada satu build, sedangkan prefiks key dulu
+tetap `dengarin:next:` untuk build mana pun. Build baru langsung "menemukan" HTML
+build lama dan menyajikannya (`registerInitialCache` memakai `setOnlyIfNotExists`,
+jadi warm-up pun tidak menimpanya).
+
+**Perbaikan:** prefiks menyertakan `BUILD_ID` Next.js:
+
+```
+dengarin:next:<BUILD_ID>:/resources
+dengarin:next:<BUILD_ID>:__sharedTags__
+```
+
+Urutan sumber build id (`resolveBuildId()` di `cache-handler.mjs`, tidak pernah
+melempar): `buildId` dari konteks `onCreation` (library membaca `.next/BUILD_ID`)
+→ `.next/BUILD_ID` di sebelah `cache-handler.mjs` → `VERCEL_DEPLOYMENT_ID` bila ada
+→ tanpa id: kembali ke prefiks lama `dengarin:next:` dan mencatat
+`[CacheHandler] BUILD_ID tidak terbaca — ...` (hanya metadata, tanpa isi cache).
+
+Key build lama **tidak dihapus**: ia berhenti dibaca dan dibersihkan sendiri oleh
+TTL `revalidate` masing-masing halaman atau eviction `allkeys-lru`. Bila ingin
+mempercepat, pakai perintah di §11 dengan pola `dengarin:next:*`.
+
 > **Kenapa `.mjs`, bukan `.ts`?** Next.js memuat file ini **lebih awal** dari pipeline kompilasinya sendiri. Pada titik itu belum ada yang bisa mentranspile TypeScript, jadi file ini wajib JavaScript murni. Ekstensi `.mjs` memberi tahu Node.js bahwa isinya ES module (`import`/`export`), bukan CommonJS (`require`).
 
 ### `instrumentation.ts` — dan perang melawan webpack
@@ -377,13 +406,13 @@ Saat `next start`, log menampilkan:
 dan seluruh halaman hasil build langsung terisi di Redis sebelum request pertama:
 
 ```
-dengarin:next:/index      dengarin:next:/chat      dengarin:next:/forum
-dengarin:next:/dashboard  dengarin:next:/journal   ... (17 key)
+dengarin:next:<BUILD_ID>:/index      dengarin:next:<BUILD_ID>:/chat      dengarin:next:<BUILD_ID>:/forum
+dengarin:next:<BUILD_ID>:/dashboard  dengarin:next:<BUILD_ID>:/journal   ... (17 key)
 ```
 
 Ia menyalin hasil build ke Redis. Tanpanya, pengguna pertama setelah setiap deploy menanggung render penuh setiap halaman.
 
-Opsi `setOnlyIfNotExists: true` berarti: **jangan timpa** entri yang sudah ditulis instance lain saat runtime. Tanpa opsi ini, instance yang baru restart akan menimpa cache yang sudah lebih baru.
+Opsi `setOnlyIfNotExists: true` berarti: **jangan timpa** entri yang sudah ditulis instance lain saat runtime. Tanpa opsi ini, instance yang baru restart akan menimpa cache yang sudah lebih baru. Karena key ber-namespace `BUILD_ID`, opsi ini aman: build baru tidak pernah "menemukan" entri build lama.
 
 ---
 
@@ -762,7 +791,8 @@ Redis mati / `REDIS_URL` kosong:
 
 ```bash
 redis-cli KEYS 'dengarin:*'          # semua key aplikasi
-redis-cli KEYS 'dengarin:next:*'     # cache halaman
+redis-cli KEYS 'dengarin:next:*'     # cache halaman (semua build)
+redis-cli KEYS "dengarin:next:$(cat apps/web/.next/BUILD_ID):*"   # hanya build yang sedang jalan
 redis-cli KEYS 'dengarin:ratelimit:*'
 redis-cli TTL dengarin:ratelimit:chat:29012345
 redis-cli MONITOR                    # lihat perintah mengalir real-time
@@ -884,13 +914,16 @@ npm run build       # build produksi
 | `Cannot find package '@/lib'` | Alias `@/` dipakai di file yang diimpor test | Ganti ke impor relatif `../redis.ts` (§9.7) |
 | Semua request kena 429 | Lupa `await` pada `isRateLimited()` | Tambahkan `await` (§9.6) |
 | Data cache aneh setelah upgrade Next | Format cache Next 14 dan 15 **tidak kompatibel** | `redis-cli FLUSHDB` lalu build ulang |
+| Situs tanpa style/tidak interaktif setelah rebuild, chunk `/_next/static/*` 404, `x-nextjs-cache: HIT` | Key cache tidak ber-namespace build (versi lama) sehingga HTML build lama disajikan | Sudah diperbaiki: prefiks `dengarin:next:<BUILD_ID>:` (§6). Pastikan log start tidak berisi `BUILD_ID tidak terbaca` |
 | `MODULE_TYPELESS_PACKAGE_JSON` warning | Node mem-parse ulang `.ts` sebagai ESM | Kosmetik saja, aman diabaikan |
 | Halaman basi meski sudah revalidate | `cacheMaxMemorySize` tidak 0 | Set `cacheMaxMemorySize: 0` di `next.config.js` |
 
 ### Menghapus cache dengan aman
 
 ```bash
-redis-cli --scan --pattern 'dengarin:next:*' | xargs -r redis-cli DEL   # cache halaman saja
+redis-cli --scan --pattern 'dengarin:next:*' | xargs -r redis-cli DEL   # cache halaman saja (semua build)
+# Sisa build lama saja (opsional — tanpa ini pun ia berhenti dibaca dan habis lewat TTL/eviction):
+redis-cli --scan --pattern 'dengarin:next:*' | grep -v ":$(cat apps/web/.next/BUILD_ID):" | xargs -r redis-cli DEL
 redis-cli --scan --pattern 'dengarin:ai:*'   | xargs -r redis-cli DEL   # cache AI saja
 redis-cli FLUSHDB                                                        # SEMUA — hati-hati
 ```
@@ -906,6 +939,7 @@ redis-cli FLUSHDB                                                        # SEMUA
 - [ ] Redis punya batas memori dan kebijakan eviction:
       `maxmemory 256mb`, `maxmemory-policy allkeys-lru`.
 - [ ] Setelah upgrade Next.js mayor, **flush** cache lama (format bisa berubah).
+- [ ] Redeploy biasa **tidak** perlu flush: key cache halaman ber-namespace `BUILD_ID`, sisa build lama habis lewat TTL/eviction (§6).
 - [ ] Redis **tidak** terekspos ke internet publik tanpa autentikasi.
 
 ### Catatan kapasitas

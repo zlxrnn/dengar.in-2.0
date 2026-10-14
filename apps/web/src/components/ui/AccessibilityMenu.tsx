@@ -5,15 +5,15 @@ import { Accessibility, Check, RotateCcw, X } from 'lucide-react';
 import { LanguageSwitch } from '@/i18n/LanguageSwitch';
 import { commonText } from '@/i18n/common';
 import { useText } from '@/i18n/store';
+import { ACCESSIBILITY_STORAGE_KEY, ACCESSIBILITY_TOGGLES } from './accessibilityInitScript';
 
 /**
  * Akses cepat mandiri: pengguna memilih bahasa dan mengatur sendiri ukuran
  * teks, kontras, garis bawah tautan, jarak baca, dan animasi. Pilihan tampilan
  * disimpan di perangkat ini saja dan diterapkan sebelum halaman tampil oleh
- * ACCESSIBILITY_INIT_SCRIPT; bahasa disimpan di cookie (lihat i18n/language.ts).
+ * ACCESSIBILITY_INIT_SCRIPT (./accessibilityInitScript.ts, tanpa 'use client'
+ * supaya bisa dibaca layout.tsx); bahasa disimpan di cookie (lihat i18n/language.ts).
  */
-
-export const ACCESSIBILITY_STORAGE_KEY = 'dengarin:aksesibilitas';
 
 const TEXT_SCALES = [
   { value: 100, key: 'normal', sample: 'text-sm' },
@@ -38,12 +38,7 @@ const DEFAULTS: Settings = {
   reduceMotion: false,
 };
 
-const TOGGLES: { key: Exclude<keyof Settings, 'textScale'>; className: string }[] = [
-  { key: 'contrast', className: 'a11y-contrast' },
-  { key: 'underline', className: 'a11y-underline' },
-  { key: 'spacing', className: 'a11y-spacing' },
-  { key: 'reduceMotion', className: 'a11y-reduce-motion' },
-];
+const TOGGLES: { key: Exclude<keyof Settings, 'textScale'>; className: string }[] = [...ACCESSIBILITY_TOGGLES];
 
 const TOGGLE_TEXT = {
   contrast: { label: 'contrast', hint: 'contrastHint' },
@@ -51,11 +46,6 @@ const TOGGLE_TEXT = {
   spacing: { label: 'spacing', hint: 'spacingHint' },
   reduceMotion: { label: 'reduceMotion', hint: 'reduceMotionHint' },
 } as const;
-
-// Dijalankan di <head> sebelum render agar tidak ada kedipan ukuran/warna.
-export const ACCESSIBILITY_INIT_SCRIPT = `(function(){try{var s=JSON.parse(localStorage.getItem('${ACCESSIBILITY_STORAGE_KEY}')||'null');if(!s)return;var r=document.documentElement;if(s.textScale&&s.textScale!==100){r.style.fontSize=s.textScale+'%';r.classList.add('a11y-scaled','a11y-scale-'+Math.floor(s.textScale));}${TOGGLES.map(
-  (t) => `if(s.${t.key})r.classList.add('${t.className}');`
-).join('')}}catch(e){}})();`;
 
 function applySettings(settings: Settings) {
   const root = document.documentElement;

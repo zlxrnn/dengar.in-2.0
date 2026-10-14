@@ -32,7 +32,7 @@ flowchart TD
     A -- rawText --> V[Validator grounding + atribusi F-A<br/>ADA: validateCarePassportDraft,<br/>sourceRef per fakta, completeness]
     V --> S{Pemilihan state<br/>AI hanya bisa mengeskalasi}
     S -- severity high atau humanSupportSuggested --> HS[HUMAN_SUPPORT_RECOMMENDED]
-    S -- concerns kosong --> NC[NEEDS_CLARIFICATION<br/>ClarificationStep: 1 pertanyaan,<br/>jawaban jadi segmen clarification, maks. 3 putaran]
+    S -- concerns kosong, atau hanya concern<br/>yang diketahui + model bertanya --> NC[NEEDS_CLARIFICATION<br/>ClarificationStep: 1 pertanyaan,<br/>jawaban jadi segmen clarification, maks. 3 putaran]
     S -- berdasar --> RR[READY_FOR_USER_REVIEW]
     RR --> UR[PassportReview: koreksi/konfirmasi/hapus,<br/>label sumber bertanggal, needsReview, Setujui<br/>ADA tanpa test]
     HS --> UR
@@ -121,7 +121,7 @@ Aturan yang ditegakkan validator (bukan sekadar diminta di prompt):
 - Label diagnosis (`DIAGNOSTIC_LABEL`) dibuang dari semua bidang, kecuali di `relevantContext` bila kutipan pengguna mengatributkannya ke klinisi ("didiagnosis oleh psikiater").
 - `unknowns` selalu ditambah label baku bila `duration`, `dailyImpact`, atau `concerns` kosong.
 - Batas: 8 butir per daftar evidence, 5 pertanyaan, 8 unknowns, panjang nilai 300 karakter; kelebihan dihitung sebagai `droppedClaims`.
-- `clarificationQuestion` maksimal satu; jika model tidak memberi, pipeline memakai `DEFAULT_CLARIFICATION_QUESTION`. UI membatasi 3 putaran klarifikasi.
+- `clarificationQuestion` maksimal satu; jika model tidak memberi dan `concerns` kosong, pipeline memakai `DEFAULT_CLARIFICATION_QUESTION`. Jalur lunak SCRUM-32 (§4) hanya memakai pertanyaan model yang lolos validator, tidak pernah pertanyaan bawaan. UI membatasi 3 putaran klarifikasi.
 
 ## 4. Lima state hasil dan tampilannya
 
@@ -130,7 +130,7 @@ Aturan yang ditegakkan validator (bukan sekadar diminta di prompt):
 | `IMMEDIATE_HELP_SCREEN` | `crisis.isCrisis` atau `isUrgentHelpRequest(rawText)` pada semua segmen digabung; dicek sebelum consent dan sebelum preview | tidak ada | `none` / `isAmd:false` / `isFallback:true`; `emergencyContacts` terisi | `ImmediateHelp` (tel:, wa.me, situs) |
 | `PROVIDER_UNAVAILABLE` | consent ditolak (`ai_consent_declined`), tidak ada provider (`no_provider_configured`), atau semua provider gagal/ditolak validator | tidak ada | `none` / `isFallback:true` | `ManualNote`; tombol coba lagi hanya bila consent diberikan |
 | `HUMAN_SUPPORT_RECOMMENDED` | draf diterima **dan** (`severity === 'high'` → warning `deterministic_high_distress`, **atau** `humanSupportSuggested: true` dari model → `model_escalation`) | ada | provider yang menghasilkan draf | `PassportReview` |
-| `NEEDS_CLARIFICATION` | draf diterima tetapi `concerns` kosong setelah grounding | ada (dengan unknowns) | provider yang menghasilkan draf | `ClarificationStep`; jawaban menjadi segmen `clarification`, lalu seluruh segmen lewat preview dan redaksi lagi |
+| `NEEDS_CLARIFICATION` | draf diterima dan tidak ada penanda eskalasi, lalu salah satu: **(a) aturan keras** `concerns` kosong setelah grounding (pertanyaan model, atau `DEFAULT_CLARIFICATION_QUESTION`), atau **(b) aturan lunak** (SCRUM-32), semua harus terpenuhi: `completeness.known <= 1` (hanya concern yang berdasar; `dailyImpact` dan `duration` kosong) **dan** pengguna sendiri menyatakan tidak tahu sebabnya (`isUnexplainedComplaint`: "entah kenapa", "nggak tahu kenapa", "tanpa sebab yang jelas", …; daftar frasa Indonesia, deterministik, pada teks tersanitasi) **dan** model memberi `clarificationQuestion` yang lolos validator **dan** belum ada segmen `clarification` (hanya ditanya sekali lewat jalur ini); warning `low_completeness_clarification`. Pipeline tidak pernah mengarang pertanyaan di jalur (b). Gerbang frasa diperlukan karena model nyata (deepseek-flash, 3/3 sampel) juga bertanya pada cerita spesifik seperti kasus D; tanpa gerbang itu D ikut jadi `NEEDS_CLARIFICATION` | ada (dengan unknowns; di jalur (b) juga ada ≥ 1 concern berdasar) | provider yang menghasilkan draf | `ClarificationStep`; jawaban menjadi segmen `clarification`, lalu seluruh segmen lewat preview dan redaksi lagi |
 | `READY_FOR_USER_REVIEW` | draf diterima, ada concern berdasar, tanpa penanda eskalasi | ada, `reviewStatus: 'user_pending'` | provider yang menghasilkan draf | `PassportReview` → `ExportActions` dan `OpeningLines` setelah Setujui |
 
 `isAmd` hanya `true` jika objek provider yang menghasilkan draf memiliki `isAmd === true` (hanya `createAmdProvider`). Provider lain yang dimasukkan pemanggil secara eksplisit dilaporkan `isAmd: false` dan UI menamainya "AI non-AMD: <id>". Pipeline **tidak** menambahkan DeepSeek/Gemini/OpenRouter secara diam-diam. Aturan yang sama berlaku untuk kalimat pembuka F-B (test `marks isAmd only when the accepted lines came from the AMD provider`).
@@ -199,7 +199,7 @@ Apa yang **tidak** dijanjikan: anonimitas total. `piiRedactor` deterministik dan
 
 | Kegagalan | Perilaku sekarang | Catatan / yang masih terbuka |
 |---|---|---|
-| Endpoint AMD tidak terjangkau / timeout (`AMD_TIMEOUT_MS`, bawaan 12000 ms) | `generate` melempar error tanpa secret; pipeline mencatat ke `warnings`, lanjut ke provider berikutnya; jika habis → `PROVIDER_UNAVAILABLE` tanpa passport (F-B: `FALLBACK_TEMPLATE`) | Retry **tidak** otomatis; pengguna yang menekan |
+| Endpoint AMD tidak terjangkau / timeout (`AMD_TIMEOUT_MS`, bawaan 30000 ms) | `generate` melempar error tanpa secret; pipeline mencatat ke `warnings`, lanjut ke provider berikutnya; jika habis → `PROVIDER_UNAVAILABLE` tanpa passport (F-B: `FALLBACK_TEMPLATE`) | Retry **tidak** otomatis; pengguna yang menekan |
 | HTTP non-2xx dari endpoint (401 key salah, 404 model salah, 503 memuat model) | Error `AMD endpoint merespons dengan status <kode>: <pesan tersaring>` di log server | Di respons browser direduksi oleh `scrubWarning` + `toPublicWarnings` menjadi kepala singkat tanpa detail upstream |
 | Model membalas bukan JSON atau JSON terbungkus prosa/fence | `parseModelJson` mengekstrak objek `{…}`; gagal → draf ditolak → provider berikutnya / `PROVIDER_UNAVAILABLE` | Alasan `AMD_JSON_MODE` mati secara bawaan dan `probeAmdEndpoint` ada |
 | Model mengarang durasi, konteks, diagnosis, obat, persentase | Bidang dibuang, dihitung di `droppedClaims`, label unknown ditambahkan | `droppedClaims` adalah metrik perilaku model untuk evaluasi dengan endpoint nyata (AMD-13/14) |

@@ -38,6 +38,7 @@ import {
   selectVoiceForLanguage,
   speakExpressively,
   speechRecognitionErrorMessage,
+  startUnlessMicrophoneDenied,
   type BrowserSpeechRecognition,
 } from '@/lib/browserSpeech';
 import { validatedActionDisplayText } from '@/lib/voiceRoom';
@@ -160,37 +161,44 @@ export default function ChatPage() {
       return;
     }
 
-    recognitionRef.current?.abort();
-    const recognition = new Recognition();
-    recognition.lang = LOCALE_TAG[lang];
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => {
-      // Recognition may only update the editable text field. It has no submit,
-      // fetch, crisis-routing, or gamification side effect.
-      applyFinalTranscript(setInputText, getFinalTranscript(event));
-      setVoiceStatus(t.voiceAdded);
-    };
-    recognition.onerror = (event) => {
-      setVoiceStatus(speechRecognitionErrorMessage(event.error, lang));
+    // Some browsers never fire 'not-allowed' for an already-blocked microphone,
+    // so an already-denied permission goes straight to the denial message.
+    void startUnlessMicrophoneDenied(window, () => {
+      recognitionRef.current?.abort();
+      const recognition = new Recognition();
+      recognition.lang = LOCALE_TAG[lang];
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = (event) => {
+        // Recognition may only update the editable text field. It has no submit,
+        // fetch, crisis-routing, or gamification side effect.
+        applyFinalTranscript(setInputText, getFinalTranscript(event));
+        setVoiceStatus(t.voiceAdded);
+      };
+      recognition.onerror = (event) => {
+        setVoiceStatus(speechRecognitionErrorMessage(event.error, lang));
+        setIsListening(false);
+      };
+      recognition.onend = () => {
+        if (recognitionRef.current === recognition) recognitionRef.current = null;
+        setIsListening(false);
+      };
+      recognitionRef.current = recognition;
+      setVoiceStatus(t.voiceListening);
+      setIsListening(true);
+      try {
+        // This is reached only from the person explicitly choosing "Mulai bicara".
+        recognition.start();
+      } catch {
+        recognitionRef.current = null;
+        setIsListening(false);
+        setVoiceStatus(t.voiceCannotStart);
+      }
+    }, () => {
+      setVoiceStatus(speechRecognitionErrorMessage('not-allowed', lang));
       setIsListening(false);
-    };
-    recognition.onend = () => {
-      if (recognitionRef.current === recognition) recognitionRef.current = null;
-      setIsListening(false);
-    };
-    recognitionRef.current = recognition;
-    setVoiceStatus(t.voiceListening);
-    setIsListening(true);
-    try {
-      // This is reached only from the person explicitly choosing "Mulai bicara".
-      recognition.start();
-    } catch {
-      recognitionRef.current = null;
-      setIsListening(false);
-      setVoiceStatus(t.voiceCannotStart);
-    }
+    });
   }, [lang, t]);
 
   const requestListening = useCallback(() => {
