@@ -120,13 +120,14 @@ AMD_BASE_URL=http://127.0.0.1:8000/v1   # KODE: dengan/tanpa /v1, trailing slash
 AMD_API_KEY=<nilai AMD_VLLM_KEY>        # KODE: boleh kosong HANYA jika endpoint loopback tanpa --api-key
 AMD_MODEL=Qwen/Qwen2.5-7B-Instruct      # KODE: harus persis seperti id di GET /v1/models
 AMD_JSON_MODE=                          # KODE: kosong = mati; isi `true` hanya jika probe melaporkan jsonModeOk: true
+AMD_MAX_TOKENS=                         # KODE: batas max_tokens; bilangan bulat 1..8192, kosong/tidak valid = 1024
 AMD_TIMEOUT_MS=25000                    # KODE: batas waktu per panggilan; dibaca pipeline, bawaan 25000
 ```
 
 Perilaku kode yang relevan (KODE):
 - `isConfigured()` benar hanya jika `AMD_BASE_URL` **dan** `AMD_MODEL` terisi. Tanpa keduanya pipeline mengembalikan `PROVIDER_UNAVAILABLE` dengan warning `no_provider_configured`.
 - `AMD_JSON_MODE=true` menambahkan `response_format: { type: 'json_object' }` ke request. Dokumentasi vLLM structured outputs (dicek 13 Okt 2026) hanya menampilkan `json_schema`, tidak menyebut `json_object` secara eksplisit, dan backend-nya bergantung pada flag server. Karena itu JSON mode mati secara bawaan dan validator tetap mengekstrak objek JSON dari teks bebas.
-- Permintaan memakai `temperature: 0.2`, `max_tokens: 1024`.
+- Permintaan memakai `temperature: 0.2` dan `max_tokens` dari `AMD_MAX_TOKENS` (bawaan 1024; nilai di luar 1..8192 atau bukan bilangan bulat diabaikan, tidak pernah melempar error). Probe §6 tetap memakai batas kecilnya sendiri.
 - Pesan error yang dikembalikan adapter menyamarkan `Bearer …` dan nilai key, dipotong 300 karakter.
 
 Variabel `DENGARIN_AI_PROVIDER` dan `DENGARIN_DEMO_MODE` yang disebut di development plan **tidak dibaca oleh kode** saat ini; jangan mengandalkannya.
@@ -242,6 +243,7 @@ AMD_BASE_URL=<base URL dari portal, mis. https://…/v1>
 AMD_API_KEY=<key dari portal>
 AMD_MODEL=<model id persis seperti di GET {base}/models>
 AMD_JSON_MODE=
+AMD_MAX_TOKENS=
 AMD_TIMEOUT_MS=25000
 ```
 
@@ -252,6 +254,7 @@ curl -s "$AMD_BASE_URL/models" -H "Authorization: Bearer $AMD_API_KEY"
 ```
 
 5. Jalankan probe §6 (`probeAmdEndpoint`). Isi `AMD_JSON_MODE=true` hanya jika `jsonModeOk: true`. Bila `latencyMs` mendekati `AMD_TIMEOUT_MS`, naikkan timeout atau pilih model yang lebih kecil.
+   Model reasoning (mis. `Qwen3.8-Flash-Next`) **tidak disarankan**: model ini menghabiskan `max_tokens` untuk penalaran sehingga `content` kosong (`finish_reason=length`, adapter melempar "tidak mengembalikan konten pesan") dan lambat (~26–30 s per panggilan). Menaikkan `AMD_MAX_TOKENS` hanya meredam gejala; pilih model non-reasoning.
 6. Catat hasil (models, latensi, tanggal, base URL tanpa key) di tabel status AMD-02 dan perbarui §9.1/§9.2 dokumen ini: pindahkan asumsi yang sudah terbukti ke tabel terverifikasi.
 7. Jalankan kasus A, B, D, E dan 20 skenario rubrik §3 terhadap endpoint ini.
 

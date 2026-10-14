@@ -19,6 +19,7 @@ export interface AmdProviderConfig {
   apiKey?: string;
   model?: string;
   jsonMode?: boolean;
+  maxTokens?: number;
   fetchImpl?: typeof fetch;
 }
 
@@ -40,13 +41,22 @@ interface ModelList {
 }
 
 const PROBE_TIMEOUT_MS = 15000;
+const DEFAULT_MAX_TOKENS = 1024;
+const MAX_MAX_TOKENS = 8192;
 
 interface ResolvedConfig {
   baseUrl: string;
   apiKey: string;
   model: string;
   jsonMode: boolean;
+  maxTokens: number;
   fetchImpl: typeof fetch;
+}
+
+/** Integer in 1..8192, otherwise the 1024 default. Never throws. */
+function resolveMaxTokens(value: number | string | undefined): number {
+  const n = typeof value === 'string' ? (/^\s*\d+\s*$/.test(value) ? Number(value) : NaN) : value;
+  return typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= MAX_MAX_TOKENS ? n : DEFAULT_MAX_TOKENS;
 }
 
 function resolveConfig(config: AmdProviderConfig = {}): ResolvedConfig {
@@ -55,6 +65,7 @@ function resolveConfig(config: AmdProviderConfig = {}): ResolvedConfig {
     apiKey: (config.apiKey ?? process.env.AMD_API_KEY ?? '').trim(),
     model: (config.model ?? process.env.AMD_MODEL ?? '').trim(),
     jsonMode: config.jsonMode ?? process.env.AMD_JSON_MODE === 'true',
+    maxTokens: resolveMaxTokens(config.maxTokens ?? process.env.AMD_MAX_TOKENS),
     fetchImpl: config.fetchImpl ?? fetch,
   };
 }
@@ -145,7 +156,7 @@ async function callChat(cfg: ResolvedConfig, options: ChatCallOptions): Promise<
 /**
  * TIER 0 for Track 2 Care Passport extraction: the team's own model on AMD.
  * Reads AMD_BASE_URL, AMD_API_KEY (optional for loopback-only endpoints),
- * AMD_MODEL and AMD_JSON_MODE by default; pass explicit values in tests.
+ * AMD_MODEL, AMD_JSON_MODE and AMD_MAX_TOKENS by default; pass explicit values in tests.
  */
 export function createAmdProvider(config?: AmdProviderConfig): LLMProvider & { readonly isAmd: true } {
   const cfg = resolveConfig(config);
@@ -174,7 +185,7 @@ export function createAmdProvider(config?: AmdProviderConfig): LLMProvider & { r
         messages,
         jsonMode: cfg.jsonMode,
         timeoutMs: request.timeoutMs,
-        maxTokens: 1024,
+        maxTokens: cfg.maxTokens,
       });
       return { rawText };
     },
