@@ -19,13 +19,17 @@
 // Output: scripts/testbench/reports/dataset-<ts>.json (full, gitignored) and
 // dataset-<ts>.summary.md (metadata only). Nothing from inputs or model output
 // is ever written to stdout; keys come from the environment and are never printed.
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { runCarePassportPipeline } from '../../services/orchestrator/src/carePassportPipeline.ts';
 import { createAmdProvider } from '../../services/orchestrator/src/providers/amdProvider.ts';
 import { BANDS, DATASET_FILE, aggregate, buildSample, loadDataset, renderSummary } from './datasetLib.mjs';
 
 const env = process.env;
+// Evaluation-only override: production prompts and safety gates remain unchanged.
+const systemPromptOverride = env.BENCH_SYSTEM_PROMPT_FILE
+  ? await readFile(env.BENCH_SYSTEM_PROMPT_FILE, 'utf8') : undefined;
 
 // provider -> OpenAI-compatible /v1 root + key (same table as bench.mjs)
 const GATEWAYS = {
@@ -107,7 +111,9 @@ function recordProvider(inner) {
     async generate(request) {
       record.calls += 1;
       try {
-        return await inner.generate(request);
+        return await inner.generate(systemPromptOverride === undefined ? request : {
+          ...request, systemPrompt: systemPromptOverride,
+        });
       } catch (error) {
         record.errors.push(error.message);
         throw error;
@@ -174,6 +180,8 @@ async function runModel(entry, cases, config) {
 // ---------------------------------------------------------------------------
 
 const config = {
+  systemPromptSha256: systemPromptOverride === undefined ? null
+    : createHash('sha256').update(systemPromptOverride).digest('hex'),
   timeoutMs: Number(env.BENCH_PASSPORT_TIMEOUT_MS) || 30000,
   jsonMode: env.BENCH_PASSPORT_JSON_MODE === 'true',
   // createAmdProvider reads AMD_MAX_TOKENS (default 1024); recorded so runs are comparable.
