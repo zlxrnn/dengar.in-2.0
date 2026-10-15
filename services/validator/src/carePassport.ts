@@ -5,7 +5,9 @@ import type {
   CarePassportSegmentKind,
   EvidenceField,
   EvidenceRef,
+  SelfHelpSuggestion,
 } from '@dengarin/types';
+import { SELF_HELP_MAX_CARDS, isSelectableSelfHelpCardId } from '@dengarin/config';
 import { containsUnsafeMedicalAdvice } from './actionValidator.ts';
 
 /**
@@ -51,10 +53,28 @@ export interface CarePassportDraftAccepted {
   droppedClaims: number;
   /** One targeted clarification question, if the model asked and it passed checks. */
   clarificationQuestion?: string;
-  /** The model may escalate toward human support; it can never de-escalate. */
+  /**
+   * The model may escalate toward human support; it can never de-escalate.
+   * Since SCRUM-44 a `true` only survives when `humanSupportQuote` is grounded
+   * (see `groundHumanSupport`); otherwise it is false and the warning
+   * `ungrounded_escalation_dropped` is recorded.
+   */
   humanSupportSuggested: boolean;
+  /** The user's own sentence the model gave as the reason to escalate (grounded). */
+  humanSupportQuote?: string;
   warnings: string[];
 }
+
+/** Warning code: the model set `humanSupportSuggested: true` without a grounded quote. */
+export const UNGROUNDED_ESCALATION_WARNING = 'ungrounded_escalation_dropped';
+
+/**
+ * Warning code (SCRUM-45): at least one `selfHelp` pick was dropped (unknown
+ * or safety-plan card id, ungrounded `reasonQuote`, duplicate, or beyond the
+ * cap). Not counted in `droppedClaims`: a card pick is a suggestion, not a
+ * fact about the user.
+ */
+export const SELF_HELP_DROPPED_WARNING = 'self_help_dropped';
 
 export interface CarePassportDraftRejected {
   ok: false;
@@ -320,6 +340,83 @@ function cleanTextList(
   return { items, dropped };
 }
 
+interface HumanSupportOutcome {
+  suggested: boolean;
+  quote?: string;
+}
+
+/**
+ * Grounded escalation (SCRUM-44). `humanSupportSuggested: true` is a claim
+ * about the user's story like any other fact, so it must point at the user's
+ * own words: `humanSupportQuote` has to be a verbatim substring of the
+ * sanitized text (same `isGroundedQuote` rules as every `sourceQuote`). A
+ * `true` without such a quote is treated as false and recorded as
+ * `ungrounded_escalation_dropped`.
+ *
+ * Trade-off, stated plainly: this can drop a model escalation that was right
+ * but badly quoted. The deterministic layer is the safety net, not this
+ * function: the pipeline locks HUMAN_SUPPORT_RECOMMENDED whenever the crisis
+ * engine returns `severity: 'high'` (including the SCRUM-44 passive-ideation
+ * rules), before and independently of anything the model says, so a dropped
+ * model escalation on text the engine already flagged changes nothing. What
+ * remains exposed is text the engine does not know AND the model escalated
+ * without quoting; that gap is measured by `missed_esc` on the synthetic
+ * dataset and must stay 0 (docs/CAREBRIDGE_DATASET.md).
+ */
+function groundHumanSupport(draft: Record<string, unknown>, sanitizedInput: string, warnings: string[]): HumanSupportOutcome {
+  if (draft.humanSupportSuggested !== true) return { suggested: false };
+  const quote = draft.humanSupportQuote;
+  if (typeof quote === 'string' && quote.length <= MAX_VALUE_LENGTH && isGroundedQuote(quote, sanitizedInput)) {
+    return { suggested: true, quote: quote.trim() };
+  }
+  warnings.push(UNGROUNDED_ESCALATION_WARNING);
+  return { suggested: false };
+}
+
+/**
+ * Self-help card picks (SCRUM-45). The model may only choose ids from the
+ * fixed catalog; anything else is noise, never content:
+ * - unknown ids and `safety_plan` ids are dropped (safety-plan cards are
+ *   static on the urgent-help screen and never an AI suggestion);
+ * - `reasonQuote` must be grounded exactly like a `sourceQuote`, so the pick
+ *   is tied to something the user actually said;
+ * - duplicates are collapsed and at most `SELF_HELP_MAX_CARDS` survive;
+ * - any extra keys (e.g. model-written "steps") are discarded: step text is
+ *   always rendered from the knowledge base.
+ * Drops are reported once as `self_help_dropped`, outside `droppedClaims`.
+ */
+function groundSelfHelp(raw: unknown, sanitizedInput: string, warnings: string[]): SelfHelpSuggestion[] {
+  if (raw === undefined || raw === null) return [];
+  const kept: SelfHelpSuggestion[] = [];
+  let dropped = false;
+  if (!Array.isArray(raw)) {
+    dropped = true;
+  } else {
+    for (const item of raw) {
+      if (!isRecord(item) || !isSelectableSelfHelpCardId(item.cardId)) {
+        dropped = true;
+        continue;
+      }
+      const quote = item.reasonQuote;
+      if (typeof quote !== 'string' || quote.length > MAX_VALUE_LENGTH || !isGroundedQuote(quote, sanitizedInput)) {
+        dropped = true;
+        continue;
+      }
+      if (kept.some((existing) => existing.cardId === item.cardId)) {
+        dropped = true;
+        continue;
+      }
+      if (kept.length >= SELF_HELP_MAX_CARDS) {
+        dropped = true;
+        continue;
+      }
+      kept.push({ cardId: item.cardId, reasonQuote: quote.trim() });
+    }
+  }
+  if (dropped) warnings.push(SELF_HELP_DROPPED_WARNING);
+  return kept;
+}
+
 export function validateCarePassportDraft(rawOutput: unknown, sanitizedInput: string): CarePassportDraftValidation {
   let draft: unknown = rawOutput;
   if (typeof rawOutput === 'string') {
@@ -389,6 +486,8 @@ export function validateCarePassportDraft(rawOutput: unknown, sanitizedInput: st
     }
   }
 
+  const selfHelp = groundSelfHelp(draft.selfHelp, sanitizedInput, warnings);
+
   const passport: CarePassport = {
     version: 1,
     subject: 'anonymous_adult',
@@ -400,7 +499,10 @@ export function validateCarePassportDraft(rawOutput: unknown, sanitizedInput: st
     unknowns: unknowns.slice(0, MAX_UNKNOWNS),
     disclaimer: CARE_PASSPORT_DISCLAIMER,
     reviewStatus: 'user_pending',
+    ...(selfHelp.length > 0 ? { selfHelp } : {}),
   };
+
+  const humanSupport = groundHumanSupport(draft, sanitizedInput, warnings);
 
   return {
     ok: true,
@@ -409,7 +511,8 @@ export function validateCarePassportDraft(rawOutput: unknown, sanitizedInput: st
       concerns.dropped + dailyImpact.dropped + relevantContext.dropped + (durationOutcome.dropped ? 1 : 0) +
       questions.dropped + modelUnknowns.dropped,
     clarificationQuestion,
-    humanSupportSuggested: draft.humanSupportSuggested === true,
+    humanSupportSuggested: humanSupport.suggested,
+    ...(humanSupport.quote ? { humanSupportQuote: humanSupport.quote } : {}),
     warnings,
   };
 }

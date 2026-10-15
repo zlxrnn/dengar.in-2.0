@@ -662,3 +662,4 @@ export const DOMAIN_MISSION_TEMPLATES: Record<InterventionDomain, DailyMission> 
 };
 
 export * from './helpDestinations.ts';
+export * from './selfHelpCards.ts';

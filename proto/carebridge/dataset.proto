@@ -1,0 +1,106 @@
+// CareBridge dataset schema (SCRUM-43, SCRUM-46).
+//
+// Source of truth stays human-reviewable JSON/JSONL in tests/carebridge/dataset/.
+// `npm run dataset:build` validates it against this schema and writes compact
+// `*.pb.zst` artifacts (Protobuf, zstd-compressed). Synthetic data only.
+syntax = "proto3";
+
+package dengarin.carebridge.v1;
+
+// Fixed topic vocabulary shared by cases and self-help cards.
+enum Topic {
+  TOPIC_UNSPECIFIED = 0;
+  TOPIC_STRESS = 1;
+  TOPIC_SLEEP = 2;
+  TOPIC_WORRY = 3;
+  TOPIC_LOW_MOOD = 4;
+  TOPIC_OVERLOAD_STUDY = 5;
+  TOPIC_OVERLOAD_WORK = 6;
+  TOPIC_MONEY = 7;
+  TOPIC_LONELINESS = 8;
+  TOPIC_GRIEF = 9;
+  TOPIC_RELATIONSHIP_CONFLICT = 10;
+  TOPIC_FAMILY_CONFLICT = 11;
+  TOPIC_GROUNDING = 12;
+  TOPIC_HEALTH_WORRY = 13;
+  TOPIC_SELF_CRITICISM = 14;
+  TOPIC_BURNOUT = 15;
+  TOPIC_SAFETY_PLAN = 16;
+}
+
+message LocalizedText {
+  string id = 1; // Bahasa Indonesia
+  string en = 2;
+}
+
+message LocalizedList {
+  repeated string id = 1;
+  repeated string en = 2;
+}
+
+message Source {
+  string title = 1;
+  string publisher = 2;
+  string url = 3;
+  string license = 4;
+  string retrieved = 5; // YYYY-MM-DD
+}
+
+message SelfHelpCard {
+  string id = 1;
+  repeated Topic topics = 2;
+  LocalizedText title = 3;
+  LocalizedText summary = 4;
+  LocalizedList steps = 5;
+  LocalizedText why = 6;
+  LocalizedText seek_help_when = 7;
+  LocalizedText cautions = 8; // optional
+  Source source = 9;
+  string evidence_note = 10;
+}
+
+message SelfHelpCardSet {
+  string version = 1;
+  repeated SelfHelpCard cards = 2;
+}
+
+enum Band {
+  BAND_UNSPECIFIED = 0;
+  BAND_MILD = 1;
+  BAND_MODERATE = 2;
+  BAND_HIGH_DISTRESS_NO_CRISIS = 3;
+  BAND_CRISIS = 4;
+  BAND_URGENT_REQUEST = 5;
+  BAND_VAGUE = 6;
+}
+
+enum Escalation {
+  ESCALATION_UNSPECIFIED = 0;
+  ESCALATION_NONE = 1;
+  ESCALATION_HUMAN_SUPPORT = 2;
+  ESCALATION_IMMEDIATE_HELP = 3;
+}
+
+message ExpectedOutcome {
+  string state = 1; // CarePassportResult state, e.g. READY_FOR_USER_REVIEW
+  Escalation escalation = 2;
+  repeated string concern_themes = 3;
+  repeated Topic self_help_topics = 4;
+  repeated string must_not_contain = 5;
+}
+
+message EvalCase {
+  string id = 1;
+  string lang = 2; // "id" | "en"
+  Band band = 3;
+  repeated Topic topics = 4;
+  string input = 5;
+  ExpectedOutcome expected = 6;
+  string notes = 7;
+  bool review_flag = 8;
+}
+
+message EvalCaseSet {
+  string version = 1;
+  repeated EvalCase cases = 2;
+}

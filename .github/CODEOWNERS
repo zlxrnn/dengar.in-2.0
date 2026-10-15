@@ -39,6 +39,10 @@
 /docker/testbench/                             @YanIanZ
 /docker-compose.testbench.yml                  @YanIanZ
 /docs/TESTBENCH.md                             @YanIanZ
+/proto/carebridge/                             @YanIanZ
+/scripts/carebridge/                           @YanIanZ
+/docs/CAREBRIDGE_DATASET.md                    @YanIanZ
+/docs/CAREBRIDGE_KNOWLEDGE_BASE.md             @YanIanZ
 /docs/CAREBRIDGE_ARCHITECTURE.md               @YanIanZ
 /docs/CAREBRIDGE_STRUCTURE_MERMAID.md          @YanIanZ
 /docs/CB-035_GOOGLE_DEEPMIND_GEMMA_AMD.md      @YanIanZ

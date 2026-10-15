@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CARE_PASSPORT_DISCLAIMER,
+  SELF_HELP_DROPPED_WARNING,
+  UNGROUNDED_ESCALATION_WARNING,
   UNKNOWN_LABELS,
   isGroundedQuote,
   normalizeForGrounding,
@@ -335,10 +337,164 @@ describe('validateCarePassportDraft — clarification and escalation', () => {
     }
   });
 
-  it('lets the model escalate toward human support but defaults to false', () => {
-    assert.equal(accept({ concerns: [], humanSupportSuggested: true }, input).humanSupportSuggested, true);
+  it('defaults humanSupportSuggested to false and ignores non-boolean values', () => {
     assert.equal(accept({ concerns: [], humanSupportSuggested: 'yes' }, input).humanSupportSuggested, false);
     assert.equal(accept({ concerns: [] }, input).humanSupportSuggested, false);
+    const explicitFalse = accept({ concerns: [], humanSupportSuggested: false, humanSupportQuote: 'entah kenapa' }, input);
+    assert.equal(explicitFalse.humanSupportSuggested, false);
+    assert.equal(explicitFalse.humanSupportQuote, undefined);
+    assert.ok(!explicitFalse.warnings.includes(UNGROUNDED_ESCALATION_WARNING));
+  });
+});
+
+describe('validateCarePassportDraft — grounded escalation (SCRUM-44)', () => {
+  const input = 'Sudah seminggu aku hampir nggak keluar kamar. Nggak mandi, nggak makan teratur. Aku merasa jadi beban buat semua orang.';
+
+  it('keeps humanSupportSuggested: true when humanSupportQuote is a verbatim quote of the sanitized text', () => {
+    const result = accept(
+      { concerns: [], humanSupportSuggested: true, humanSupportQuote: 'hampir nggak keluar kamar' },
+      input
+    );
+    assert.equal(result.humanSupportSuggested, true);
+    assert.equal(result.humanSupportQuote, 'hampir nggak keluar kamar');
+    assert.ok(!result.warnings.includes(UNGROUNDED_ESCALATION_WARNING));
+  });
+
+  it('grounding ignores case, whitespace and smart quotes like every other quote', () => {
+    const result = accept(
+      { concerns: [], humanSupportSuggested: true, humanSupportQuote: '  Nggak   MANDI, nggak makan teratur ' },
+      input
+    );
+    assert.equal(result.humanSupportSuggested, true);
+  });
+
+  it('treats true WITHOUT a quote as false and records ungrounded_escalation_dropped', () => {
+    const result = accept({ concerns: [], humanSupportSuggested: true }, input);
+    assert.equal(result.humanSupportSuggested, false);
+    assert.equal(result.humanSupportQuote, undefined);
+    assert.ok(result.warnings.includes(UNGROUNDED_ESCALATION_WARNING));
+  });
+
+  it('treats true with a paraphrased or invented quote as false', () => {
+    for (const quote of ['tidak keluar kamar selama seminggu', 'aku ingin menyakiti diri', 'ab', 42, null, ['hampir nggak keluar kamar']]) {
+      const result = accept({ concerns: [], humanSupportSuggested: true, humanSupportQuote: quote }, input);
+      assert.equal(result.humanSupportSuggested, false, JSON.stringify(quote));
+      assert.ok(result.warnings.includes(UNGROUNDED_ESCALATION_WARNING), JSON.stringify(quote));
+    }
+  });
+
+  it('a quote that only exists across two segments does not ground an escalation', () => {
+    const segments = 'Aku capek banget.\n¶\nSemua orang lebih baik tanpa aku.';
+    const across = accept({ concerns: [], humanSupportSuggested: true, humanSupportQuote: 'capek banget. Semua orang' }, segments);
+    assert.equal(across.humanSupportSuggested, false);
+    const inside = accept({ concerns: [], humanSupportSuggested: true, humanSupportQuote: 'semua orang lebih baik tanpa aku' }, segments);
+    assert.equal(inside.humanSupportSuggested, true);
+  });
+
+  it('does not count a dropped escalation as a dropped claim (it is a warning, not a fact)', () => {
+    const result = accept({ concerns: [], humanSupportSuggested: true }, input);
+    assert.equal(result.droppedClaims, 0);
+  });
+});
+
+describe('validateCarePassportDraft — self-help card picks (SCRUM-45)', () => {
+  const input = 'Beberapa minggu ini aku susah tidur dan gampang panik kalau mikirin kerjaan. Aku masih masuk kantor tiap hari.';
+  const base = {
+    concerns: [field('Susah tidur', 'susah tidur')],
+    dailyImpact: [],
+    duration: { value: null, source: 'unknown' },
+    questionsForProfessional: [],
+    unknowns: [],
+  };
+  const pick = (cardId, reasonQuote) => ({ cardId, reasonQuote });
+
+  it('keeps a known selectable card with a grounded reasonQuote, outside droppedClaims', () => {
+    const result = accept({ ...base, selfHelp: [pick('jadwal-tidur-konsisten', 'susah tidur')] }, input);
+    assert.deepEqual(result.passport.selfHelp, [{ cardId: 'jadwal-tidur-konsisten', reasonQuote: 'susah tidur' }]);
+    assert.equal(result.droppedClaims, 0);
+    assert.ok(!result.warnings.includes(SELF_HELP_DROPPED_WARNING));
+  });
+
+  it('omits selfHelp entirely when the model sends none or an empty list', () => {
+    assert.equal('selfHelp' in accept(base, input).passport, false);
+    assert.equal('selfHelp' in accept({ ...base, selfHelp: [] }, input).passport, false);
+  });
+
+  it('drops an unknown card id with self_help_dropped, not droppedClaims', () => {
+    const result = accept({ ...base, selfHelp: [pick('kartu-karangan', 'susah tidur')] }, input);
+    assert.equal(result.passport.selfHelp, undefined);
+    assert.ok(result.warnings.includes(SELF_HELP_DROPPED_WARNING));
+    assert.equal(result.droppedClaims, 0);
+  });
+
+  it('refuses safety_plan cards: they are never an AI suggestion', () => {
+    for (const id of ['rencana-keselamatan-enam-langkah', 'rencana-keselamatan-cara-menggunakan']) {
+      const result = accept({ ...base, selfHelp: [pick(id, 'susah tidur')] }, input);
+      assert.equal(result.passport.selfHelp, undefined, id);
+      assert.ok(result.warnings.includes(SELF_HELP_DROPPED_WARNING), id);
+    }
+  });
+
+  it('drops a pick whose reasonQuote is missing, paraphrased or too long', () => {
+    for (const bad of [
+      { cardId: 'jadwal-tidur-konsisten' },
+      pick('jadwal-tidur-konsisten', 'tidurnya terganggu'),
+      pick('jadwal-tidur-konsisten', 'x'.repeat(301)),
+      pick('jadwal-tidur-konsisten', 42),
+    ]) {
+      const result = accept({ ...base, selfHelp: [bad] }, input);
+      assert.equal(result.passport.selfHelp, undefined, JSON.stringify(bad));
+      assert.ok(result.warnings.includes(SELF_HELP_DROPPED_WARNING));
+    }
+  });
+
+  it('caps at 3 cards, keeping the first three valid ones', () => {
+    const result = accept(
+      {
+        ...base,
+        selfHelp: [
+          pick('jadwal-tidur-konsisten', 'susah tidur'),
+          pick('kamar-dan-layar-sebelum-tidur', 'susah tidur'),
+          pick('napas-lambat-tiga-hitungan', 'gampang panik'),
+          pick('beban-kerja-bicara-dan-atur-batas', 'mikirin kerjaan'),
+        ],
+      },
+      input
+    );
+    assert.deepEqual(result.passport.selfHelp.map((s) => s.cardId), ['jadwal-tidur-konsisten', 'kamar-dan-layar-sebelum-tidur', 'napas-lambat-tiga-hitungan']);
+    assert.ok(result.warnings.includes(SELF_HELP_DROPPED_WARNING));
+  });
+
+  it('collapses duplicate card ids and skips invalid items without losing valid ones', () => {
+    const result = accept(
+      {
+        ...base,
+        selfHelp: [
+          pick('napas-lambat-tiga-hitungan', 'gampang panik'),
+          pick('napas-lambat-tiga-hitungan', 'susah tidur'),
+          'bukan objek',
+          pick('jadwal-tidur-konsisten', 'susah tidur'),
+        ],
+      },
+      input
+    );
+    assert.deepEqual(result.passport.selfHelp.map((s) => s.cardId), ['napas-lambat-tiga-hitungan', 'jadwal-tidur-konsisten']);
+    assert.ok(result.warnings.includes(SELF_HELP_DROPPED_WARNING));
+  });
+
+  it('never lets the model supply step text: extra keys are discarded, only {cardId, reasonQuote} survive', () => {
+    const result = accept(
+      { ...base, selfHelp: [{ cardId: 'jadwal-tidur-konsisten', reasonQuote: 'susah tidur', steps: ['Minum obat tidur 5 mg'], title: 'Karangan' }] },
+      input
+    );
+    assert.deepEqual(Object.keys(result.passport.selfHelp[0]).sort(), ['cardId', 'reasonQuote']);
+    assert.ok(!JSON.stringify(result.passport).includes('obat tidur'));
+  });
+
+  it('ignores a non-array selfHelp with a warning', () => {
+    const result = accept({ ...base, selfHelp: { cardId: 'jadwal-tidur-konsisten', reasonQuote: 'susah tidur' } }, input);
+    assert.equal(result.passport.selfHelp, undefined);
+    assert.ok(result.warnings.includes(SELF_HELP_DROPPED_WARNING));
   });
 });
 

@@ -180,7 +180,7 @@ const id = {
 
   exportActions: {
     title: 'Simpan ke perangkat ini',
-    body: 'File berisi hanya poin yang kamu setujui, pertanyaanmu, dan catatan penting. Tanpa kutipan mentah, tanpa nama model. Tidak dikirim ke mana pun.',
+    body: 'File berisi hanya poin yang kamu setujui, pertanyaanmu, langkah yang kamu simpan, dan catatan penting. Tanpa kutipan mentah, tanpa nama model. Tidak dikirim ke mana pun.',
     md: 'Unduh sebagai .md',
     txt: 'Unduh sebagai .txt',
     done: (format: string) => `Tersimpan sebagai .${format}. Kalau halaman ini ditutup, catatannya tetap ada di file itu.`,
@@ -204,6 +204,16 @@ const id = {
     siteAria: (name: string) => `Buka situs ${name} (tab baru)`,
     fullPage: 'Buka halaman bantuan darurat lengkap',
     restart: 'Mulai catatan dari awal',
+    safetyPlan: {
+      aria: 'Rencana keselamatan',
+      tag: 'Bukan dari AI',
+      title: 'Kalau nanti sudah lebih tenang: rencana keselamatan',
+      lede: 'Kontak di atas yang utama. Dua kartu di bawah ini teks tetap dari panduan publik, bukan hasil AI, dan paling baik disusun bersama orang yang terlatih.',
+      steps: 'Langkah',
+      seekHelp: 'Kapan harus segera menghubungi bantuan',
+      cautions: 'Perlu diingat',
+      source: 'Sumber',
+    },
   },
 
   review: {
@@ -261,6 +271,21 @@ const id = {
     noQuestions: 'Belum ada pertanyaan.',
     editQuestion: 'Ubah pertanyaan',
     newQuestion: 'Pertanyaan baru',
+    selfHelp: {
+      aria: 'Langkah yang bisa dicoba',
+      title: 'Langkah yang bisa dicoba',
+      lede: 'Kartu di bawah dipilih dari panduan publik berdasarkan hal yang kamu ceritakan. Isinya teks tetap, bukan tulisan AI. Ini langkah umum untuk merawat diri, bukan saran medis dan bukan pengganti bertemu profesional.',
+      tag: 'Panduan umum',
+      why: 'Kenapa ini',
+      steps: 'Langkah',
+      seekHelp: 'Kapan perlu bantuan profesional',
+      cautions: 'Perlu diingat',
+      source: 'Sumber',
+      adapted: 'Diadaptasi oleh Dengar.in; penerbit asli tidak membuat dan tidak bertanggung jawab atas adaptasi ini.',
+      hide: 'Tidak perlu',
+      hideAria: (title: string) => `Hapus langkah: ${title}`,
+      hiddenNote: 'Kartu yang kamu hapus tidak ikut masuk ke file unduhan.',
+    },
   },
 
   opening: {
@@ -326,6 +351,7 @@ const id = {
       relevantContext: 'Hal lain yang berkaitan',
       questionsForProfessional: 'Pertanyaan untuk profesional',
       unknowns: 'Belum diketahui / belum diceritakan',
+      selfHelp: 'Langkah yang bisa dicoba',
     },
     empty: 'Belum diisi.',
     noQuestions: 'Belum ada pertanyaan yang dicatat.',
@@ -333,6 +359,14 @@ const id = {
     journal: 'jurnal',
     checkin: 'check-in',
     fileStem: 'catatan-konsultasi',
+    selfHelp: {
+      intro: 'Langkah umum dari panduan publik yang dipilih berdasarkan cerita penulis dan disimpan olehnya. Bukan saran medis dan bukan pengganti penilaian profesional.',
+      why: 'Kenapa ini',
+      seekHelp: 'Kapan perlu bantuan profesional',
+      cautions: 'Perlu diingat',
+      source: 'Sumber',
+      adapted: 'Diadaptasi oleh Dengar.in; penerbit asli tidak membuat dan tidak bertanggung jawab atas adaptasi ini.',
+    },
   },
 };
 
@@ -509,7 +543,7 @@ const en: typeof id = {
 
   exportActions: {
     title: 'Save to this device',
-    body: 'The file contains only the points you approved, your questions, and the important note. No raw quotes, no model names. It is not sent anywhere.',
+    body: 'The file contains only the points you approved, your questions, the steps you kept, and the important note. No raw quotes, no model names. It is not sent anywhere.',
     md: 'Download as .md',
     txt: 'Download as .txt',
     done: (format: string) => `Saved as .${format}. If you close this page, the notes stay in that file.`,
@@ -533,6 +567,16 @@ const en: typeof id = {
     siteAria: (name: string) => `Open the ${name} website (new tab)`,
     fullPage: 'Open the full emergency help page',
     restart: 'Start the notes over',
+    safetyPlan: {
+      aria: 'Safety plan',
+      tag: 'Not from AI',
+      title: 'For when things are calmer: a safety plan',
+      lede: 'The contacts above come first. The two cards below are fixed text from public guidance, not AI output, and are best worked through with someone trained.',
+      steps: 'Steps',
+      seekHelp: 'When to reach out right away',
+      cautions: 'Keep in mind',
+      source: 'Source',
+    },
   },
 
   review: {
@@ -590,6 +634,21 @@ const en: typeof id = {
     noQuestions: 'No questions yet.',
     editQuestion: 'Edit question',
     newQuestion: 'New question',
+    selfHelp: {
+      aria: 'Things you can try',
+      title: 'Things you can try',
+      lede: 'The cards below were picked from public guidance based on what you shared. Their text is fixed, not written by AI. These are general self-care steps, not medical advice and not a substitute for seeing a professional.',
+      tag: 'General guidance',
+      why: 'Why this',
+      steps: 'Steps',
+      seekHelp: 'When to seek professional help',
+      cautions: 'Keep in mind',
+      source: 'Source',
+      adapted: 'Adapted by Dengar.in; the original publisher did not create and is not responsible for this adaptation.',
+      hide: 'Not for me',
+      hideAria: (title: string) => `Remove step: ${title}`,
+      hiddenNote: 'Cards you remove are left out of the downloaded file.',
+    },
   },
 
   opening: {
@@ -655,6 +714,7 @@ const en: typeof id = {
       relevantContext: 'Other relevant things',
       questionsForProfessional: 'Questions for the professional',
       unknowns: 'Not yet known / not yet shared',
+      selfHelp: 'Things you can try',
     },
     empty: 'Not filled in.',
     noQuestions: 'No questions recorded.',
@@ -662,6 +722,14 @@ const en: typeof id = {
     journal: 'journal',
     checkin: 'check-in',
     fileStem: 'consultation-notes',
+    selfHelp: {
+      intro: 'General steps from public guidance, picked based on the author\'s story and kept by the author. Not medical advice and not a substitute for professional assessment.',
+      why: 'Why this',
+      seekHelp: 'When to seek professional help',
+      cautions: 'Keep in mind',
+      source: 'Source',
+      adapted: 'Adapted by Dengar.in; the original publisher did not create and is not responsible for this adaptation.',
+    },
   },
 };
 

@@ -51,6 +51,20 @@ Laporan JSON per run ditulis ke `scripts/testbench/reports/` (gitignored,
 berisi output model dari input sintetis), plus `*.summary.md` yang hanya berisi
 metadata (model, case, expected/got, latensi, kode error) dan aman ditempel ke Jira.
 
+### Dataset sintetis Care Passport (SCRUM-43/44)
+
+```bash
+docker run --rm --env-file .env.testbench -e BENCH_PASSPORT_JSON_MODE=true \
+  -e BENCH_PASSPORT_MODELS=tokenfactory:Gemma-4-31B-IT,deepseek:deepseek-flash \
+  -v "$PWD":/app -v /app/node_modules --entrypoint node dengarin-testbench-bench \
+  --experimental-strip-types --no-warnings scripts/testbench/dataset.mjs
+```
+
+Menjalankan 67 kasus `tests/carebridge/dataset/cases.v1.jsonl` lewat pipeline Care Passport
+asli per model dan menulis `reports/dataset-<ts>.json` (lengkap, gitignored) + `.summary.md`
+(metadata saja: per model × band, false/missed escalation, kegagalan provider, p50). Dataset card,
+definisi metrik, dan hasil baseline: `docs/CAREBRIDGE_DATASET.md`.
+
 ### Uji gangguan Care Passport
 
 ```bash

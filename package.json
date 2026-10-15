@@ -42,6 +42,7 @@
     "test:infra": "node --experimental-strip-types tests/infra/envExampleParity.test.mjs && node --experimental-strip-types tests/infra/ruangNgobrolLinks.test.mjs && node --experimental-strip-types tests/infra/serverClientImports.test.mjs && node --experimental-strip-types tests/infra/cacheHandlerBuildId.test.mjs",
     "lint:services": "eslint --config eslint.services.config.mjs services packages",
     "test:carebridge": "node --experimental-strip-types --test tests/carebridge/*.test.mjs",
+    "dataset:build": "node --experimental-strip-types scripts/carebridge/build-dataset.mjs",
     "probe:amd": "node --experimental-strip-types --env-file=.env.local scripts/probe-amd.mjs",
     "eval:carebridge:mock": "node --experimental-strip-types scripts/eval-carebridge.mjs --mode=mock",
     "eval:carebridge:live": "node --experimental-strip-types --env-file=.env.local scripts/eval-carebridge.mjs --mode=live",
@@ -65,5 +66,8 @@
     "crisis-safety"
   ],
   "author": "Dengar.in Team",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "protobufjs": "^8.8.1"
+  }
 }

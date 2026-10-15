@@ -127,6 +127,31 @@ const CRISIS_RULES: PatternRule[] = [
     category: 'extreme_hopelessness',
     severity: 'high'
   },
+  {
+    // Passive ideation without a plan (SCRUM-44, approved by the Safety owner):
+    // "others would be better off without me", "it would be better if I did
+    // not exist / had never been born". Deterministic `high`, so the Care
+    // Passport path is locked to HUMAN_SUPPORT_RECOMMENDED regardless of the
+    // model; not `crisis`, because no intent, plan or means is expressed. The
+    // explicit forms ("dunia lebih baik tanpaku", "aku ingin menghilang
+    // selamanya") stay `crisis` through the rules above. A trailing place
+    // ("lebih baik aku nggak ada di rapat itu") is excluded; "di dunia" is not.
+    id: 'passive-ideation',
+    pattern: /\b(?:semua\s*orang|orang[\s-]*orang|mereka|keluarga(?:ku)?|teman[\s-]*teman(?:ku)?|semuanya)\s*(?:akan\s*|bakal\s*|pasti\s*|mungkin\s*)?lebih\s*(?:baik|tenang|bahagia|senang)\s*(?:tanpa\s*(?:ada\s*)?(?:aku|saya|gue|gw|diriku)\b|(?:kalau|jika)\s*(?:aku|saya|gue|gw)\s*(?:nggak|ngga|gak|ga|tidak|tak|enggak)\s*ada\b(?!\s+(?:di|dalam)\s+(?!dunia)))|\b(?:lebih\s*baik|mending|andai(?:kan)?|coba)\s*(?:kalau\s*|jika\s*)?(?:aku|saya|gue|gw)\s*(?:nggak|ngga|gak|ga|tidak|tak|enggak)\s*(?:pernah\s*)?(?:ada|lahir|dilahirkan)\b(?!\s+(?:di|dalam)\s+(?!dunia))/i,
+    category: 'extreme_hopelessness',
+    severity: 'high'
+  },
+  {
+    // English counterpart of `passive-ideation` (SCRUM-44). "everyone would be
+    // better off without me" already routes to crisis via `en-farewell-note`
+    // and is NOT lowered here; this rule adds the softer forms that no rule
+    // caught before. Hyperbole such as "I wish I could disappear" after an
+    // embarrassment is left alone: "forever / for good / completely" is required.
+    id: 'en-passive-ideation',
+    pattern: /\b(?:wish\s*(?:that\s*)?i\s*(?:could\s*)?(?:just\s*)?(?:disappear|vanish)\s*(?:forever|for\s*good|completely)|wish\s*(?:that\s*)?i\s*(?:didn'?t|did\s*not|never)\s*exist(?:ed)?|(?:everyone|everybody|they|my\s*family|people)\s*(?:would|will)\s*be\s*(?:happier|better\s*off|relieved)\s*(?:without\s*me|if\s*i\s*(?:was|were)\s*gone|if\s*i\s*(?:wasn'?t|weren'?t)\s*(?:here|around)))\b/i,
+    category: 'extreme_hopelessness',
+    severity: 'high'
+  },
 
   // ENGLISH COVERAGE (UI language EN). These rules run for EVERY input, in
   // addition to the Indonesian catalog above, so a mixed-language message is
