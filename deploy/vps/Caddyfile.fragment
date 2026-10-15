@@ -1,0 +1,5 @@
+dengar-in.vertalt.my.id {
+    encode zstd gzip
+    header Strict-Transport-Security "max-age=31536000"
+    reverse_proxy dengarin-web:3000
+}
