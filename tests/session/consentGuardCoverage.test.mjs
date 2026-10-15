@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 const APP_DIR = fileURLToPath(new URL('../../apps/web/src/app/', import.meta.url));
 const COMPONENTS_DIR = fileURLToPath(new URL('../../apps/web/src/components/', import.meta.url));
 
-/** Routes that must stay reachable without consent (help must never be gated). */
-const UNGUARDED_ROUTES = new Set(['/', '/consent', '/crisis', '/resources']);
+/** Public help and synthetic review pages must stay reachable without consent. */
+const UNGUARDED_ROUTES = new Set(['/', '/consent', '/crisis', '/resources', '/review-demo', '/support-options']);
 
 function findPages(dir) {
   const pages = [];
@@ -58,12 +58,19 @@ describe('H5: consent guard coverage', () => {
     }
   });
 
-  it('keeps the unguarded allowlist exactly landing, consent, crisis and resources', () => {
+  it('keeps the unguarded allowlist limited to public help and synthetic review', () => {
     const unguarded = pages
       .filter(({ source }) => !/useConsentGuard\(\)/.test(source))
       .map(({ route }) => route)
       .sort();
     assert.deepEqual(unguarded, [...UNGUARDED_ROUTES].sort());
+  });
+
+  it('public review and support pages do not collect or send personal intake', () => {
+    for (const route of ['/review-demo', '/support-options']) {
+      assert.doesNotMatch(read(route), /<textarea\b|<form\b|fetch\s*\(|localStorage|sessionStorage|navigator\.mediaDevices/,
+        `${route} must remain a public static-information surface`);
+    }
   });
 
   it('covers the pages added in this pass', () => {
