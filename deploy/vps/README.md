@@ -18,11 +18,14 @@ keys and model URLs only in that server-side file. Its permissions must be 600.
 
 Run `bash /opt/dengarin/provision-tls.sh` once. It creates a private CA and a
 certificate for `dengarin-postgres`; the web client verifies that certificate.
-The key ownership targets uid 999 in `postgres:16-bookworm`.
+The key ownership targets uid 70 in `postgres:16-alpine`. Rerunning the script
+repairs key ownership without replacing existing certificates.
 
+Append the Caddy fragment to the existing configuration, validate it, and reload
+Caddy before starting the application deployment. This allows certificate issuance
+to finish independently of image downloads; the proxy returns 502 until the app is ready.
 Install the units into `/etc/systemd/system`, run `systemctl daemon-reload`, then
-`systemctl start dengarin-update.service`. Once healthy, append the Caddy
-fragment to the existing configuration, validate it, and reload Caddy.
+`systemctl start dengarin-update.service`.
 Enable polling with `systemctl enable --now dengarin-update.timer`.
 
 ## Automatic updates
