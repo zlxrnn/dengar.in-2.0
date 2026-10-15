@@ -43,6 +43,26 @@ no unfinished image was deployed. Increase that outer budget to 60 minutes for
 this host and verify the next rollout. This permits the cold build to complete;
 it does not make compilation faster or establish an application latency pass.
 
+The retry also logged socket-hang-up retries during compilation. The root
+layout used `next/font/google`, whose font-resource downloader retries external
+requests at build time. Bundle the same Schibsted Grotesk variable font locally
+with `next/font/local`; retain weight range 600–800, swap display and the existing
+CSS variable. Font source is pinned to Google Fonts commit
+`1d0e46c7933245c8180fe83e47917961c913bbdb`, with hashes and the SIL OFL 1.1 license
+under `apps/web/src/app/fonts/`; a public license copy is also provided.
+
+The WOFF2 retains full glyph coverage and is 70,032 bytes. App compilation was
+verified with Docker RUN-step networking disabled and an imported preinstalled
+dependency stage. Installing npm dependencies itself still requires the
+registry/cache; this does not claim a fresh install can run without network.
+The active VPS remains on its healthy image until a reviewed main update is
+successfully built and rolled out.
+
+Post-font Linux/amd64 image smoke passed: mobile 8/8 and voice browser 3/3,
+same-origin WOFF2 HTTP 200, weight 700 heading rendered at 390×844 without
+horizontal overflow, health HTTP 200 and public font-license HTTP 200.
+Browser summaries began 20:32:13 / 20:32:14 UTC; font smoke at 20:33:36 UTC.
+
 The recorded live public consultation returned HTTP 200,
 `READY_FOR_USER_REVIEW`, provider `amd:DeepSeek-V4-Flash`, no validation warnings,
 and inference latency 22,973 ms. This is live AMD gateway evidence, not a mock
@@ -69,6 +89,9 @@ are called complete. No production fault settings are changed for these tests.
   sources recorded per card in `packages/config/src/selfHelpCards.v1.json` and
   `docs/CAREBRIDGE_KNOWLEDGE_BASE.md`; the root MIT license does not relicense
   third-party knowledge-base content.
+- Bundled Schibsted Grotesk is separately licensed under SIL OFL 1.1. Font
+  copyright/license and source provenance accompany the asset; it is not
+  relicensed by the application's MIT LICENSE.
 - The user confirmed completion of the pending final Safety/QA and product/
   reuse checks on 16 October. Jira records that as user-reported confirmation,
   rather than an independent legal or reviewer determination by this agent.

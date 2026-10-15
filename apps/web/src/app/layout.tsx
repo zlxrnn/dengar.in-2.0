@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { Schibsted_Grotesk } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -10,12 +10,13 @@ import { ACCESSIBILITY_INIT_SCRIPT } from '@/components/ui/accessibilityInitScri
 import { LANGUAGE_INIT_SCRIPT } from '@/i18n/language';
 import { SkipLink } from '@/components/SkipLink';
 
-// Judul: Schibsted Grotesk (Bakken & Bæck), di-host sendiri oleh next/font saat build
+// Judul: Schibsted Grotesk (Bakken & Bæck), dibundel lokal agar build tidak
+// bergantung pada koneksi Google Fonts. Lisensi OFL ada di ./fonts/OFL.txt.
 // sehingga memenuhi CSP `font-src 'self'`. Teks biasa memakai font sistem perangkat:
 // paling jelas dan paling ringan untuk ponsel murah.
-const displayFont = Schibsted_Grotesk({
-  subsets: ['latin'],
-  weight: ['600', '700', '800'],
+const displayFont = localFont({
+  src: './fonts/SchibstedGrotesk-Variable.woff2',
+  weight: '600 800',
   display: 'swap',
   variable: '--font-display',
 });
