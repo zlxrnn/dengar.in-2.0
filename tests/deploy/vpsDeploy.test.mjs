@@ -26,6 +26,7 @@ async function fixture(fn) {
     await writeFile(docker, `#!/bin/sh
 printf '%s\\n' "$*" >> "$DENGARIN_ROOT/calls"
 if [ "$1" = inspect ]; then printf 'healthy\\n'; exit 0; fi
+if [ "$1" = image ] && [ "$2" = inspect ]; then printf '%s\\n' "$PREBUILT_SHA"; exit 0; fi
 if [ "$1" = build ] && [ "$FAIL_STAGE" = build ]; then exit 31; fi
 case "$*" in
   *' run '*) [ "$FAIL_STAGE" != migration ] || exit 32 ;;
@@ -57,3 +58,10 @@ for (const stage of ['build', 'migration', 'health']) {
     assert.equal((await readFile(join(root, 'active-revision'), 'utf8')).trim(), 'previous');
   }));
 }
+
+test('VPS updater accepts an image only when its revision label matches the requested commit', { skip: !hasFlock }, async () => fixture(async ({ root, sha, deploy }) => {
+  assert.equal(deploy({ PREBUILT_SHA: sha }).status, 0);
+  const calls = await readFile(join(root, 'calls'), 'utf8');
+  assert.equal(calls.split('\n').some(l => l.startsWith('build ')), false);
+  assert.equal((await readFile(join(root, 'active-revision'), 'utf8')).trim(), sha);
+}));

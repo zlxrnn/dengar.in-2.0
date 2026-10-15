@@ -21,7 +21,10 @@ if [[ $wanted == "$active" ]] && [[ $(docker inspect --format '{{.State.Health.S
 fi
 git -C source checkout --detach "$wanted"
 printf 'Building %s\n' "$wanted"
-docker build --label "org.opencontainers.image.revision=$wanted" -f source/apps/web/Dockerfile -t "dengarin-web:$wanted" source
+# A verified prebuilt image can be loaded by an operator, or reused after a failed rollout.
+if [[ $(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "dengarin-web:$wanted" 2>/dev/null || true) != "$wanted" ]]; then
+  docker build --label "org.opencontainers.image.revision=$wanted" -f source/apps/web/Dockerfile -t "dengarin-web:$wanted" source
+fi
 previous=$(cat release.env 2>/dev/null || true)
 printf 'DENGARIN_IMAGE=dengarin-web:%s\n' "$wanted" > release.next
 chmod 600 release.next

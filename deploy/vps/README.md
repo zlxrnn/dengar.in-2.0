@@ -31,7 +31,8 @@ The timer checks GitHub approximately every minute after the previous attempt
 finishes. No GitHub token, webhook, or exposed deployment endpoint is required
 for this public repository. A file lock prevents overlapping deployments.
 
-A new revision is built before replacing the running application. Database
+A new revision is built before replacing the running application. A preloaded
+image is reused only when its OCI revision label matches that exact commit. Database
 migrations run before the new web container starts. The updater only records
 `active-revision` after Compose reports healthy. Build failures leave the old
 app untouched. Migration/startup failures restore the previous image when one
