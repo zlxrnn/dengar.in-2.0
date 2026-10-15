@@ -9,7 +9,7 @@ only. Vercel remains excluded per the deployment migration decision.
 | Check | Result |
 |---|---|
 | `npm ci --ignore-scripts --no-audit --no-fund` | Pass |
-| `npm test` | Pass: 890 node:test assertions, 0 failures, 0 skips; Redis integration 14/14 |
+| `npm test` | Pass: 890 node:test cases, 0 failures, 0 skips; Redis integration 14/14 |
 | `npm run typecheck` | Pass |
 | `npm run lint` | Pass |
 | `npm run build` | Pass, Next 15.5.25 production build |
@@ -36,6 +36,12 @@ Public URL: <https://dengar-in.vertalt.my.id>. HTTPS verification and public
 healthy; four migrations applied. Automatic GitHub-main update timer is active.
 PRs #4 and #5 contain the merged deployment changes. Build-before-replacement
 keeps the active application serving during subsequent builds.
+
+The first automatic build of `e665d5a` exceeded the outer 30-minute systemd
+budget while collecting page data. The active `51b3d53` app remained healthy;
+no unfinished image was deployed. Increase that outer budget to 60 minutes for
+this host and verify the next rollout. This permits the cold build to complete;
+it does not make compilation faster or establish an application latency pass.
 
 The recorded live public consultation returned HTTP 200,
 `READY_FOR_USER_REVIEW`, provider `amd:DeepSeek-V4-Flash`, no validation warnings,
