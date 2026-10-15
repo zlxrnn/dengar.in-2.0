@@ -159,7 +159,7 @@ export function PrivacyWarningPopup() {
                 <li className="flex items-start gap-2.5 p-3 bg-[#FFEBEB] border-2 border-[#151515] rounded-[4px]">
                   <AlertTriangle className="w-5 h-5 text-[#B3261E] shrink-0 mt-0.5" aria-hidden="true" />
                   <p className="text-base leading-relaxed">
-                    <strong className="font-bold">{t.rule2Strong}</strong>
+                    <strong className="font-bold">{t.rule2Strong}</strong>{t.rule2}
                   </p>
                 </li>
 
