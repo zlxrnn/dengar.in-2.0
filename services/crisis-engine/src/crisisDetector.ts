@@ -91,7 +91,7 @@ const CRISIS_RULES: PatternRule[] = [
   // cutting phrased with a verb prefix/suffix, and "life is not worth living".
   {
     id: 'end-everything-phrase',
-    pattern: /\b(?:ingin|mau|pengen|akan)?\s*(?:mengakhiri|akhiri|menyudahi|sudahi)\s*(?:semuanya|semua\s*ini|segalanya)\b/i,
+    pattern: /\b(?:ingin|mau|pengen|akan)?\s*(?:mengakhiri|akhiri|menyudahi|sudahi|bunuh\s*diri)\s*(?:semuanya|semua\s*ini|segalanya)\b/i,
     category: 'suicide',
     severity: 'crisis'
   },
@@ -283,9 +283,10 @@ const STATIC_EMERGENCY_CONTACTS: EmergencyContact[] = [
     id: 'yayasan-pulih',
     name: 'Yayasan Pulih',
     category: 'crisis_hotline',
-    phone: '021-788-42580',
-    whatsapp: '0811-8436-633',
-    availableHours: 'Hari dan jam kerja',
+    phone: '021-7884-2580',
+    whatsapp: '0811-843-6633',
+    website: 'https://yayasanpulih.or.id/',
+    availableHours: 'Operasional Kantor (Senin - Jumat: 9.00-17.00); Layanan Psikologi (Selasa - Sabtu: 9.00-16.00)',
     cost: 'tarif_standar',
     description: 'Konseling trauma dan pemulihan psikologis.',
     targetAgeBrackets: ['18-29', '30-49', '50+', '18-24', '25-34', '35-54'],

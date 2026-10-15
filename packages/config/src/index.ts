@@ -38,13 +38,12 @@ import type {
  *     phone number, so the old 021-3777-5472 (found in no source) was removed,
  *     as was the 0811-381-5472 English line (third-party directories only).
  * yayasan-pulih
- *   - https://web.archive.org/web/20260911113333/https://yayasanpulih.org/ :
- *     "Telp : +62 21 788 42 580".
+ *   - https://yayasanpulih.or.id/ (2026-10-15): live site, verified phone
+ *     021-7884-2580 and WhatsApp 0811-843-6633. Hours: Operasional Kantor
+ *     Senin-Jumat 9.00-17.00; Layanan Psikologi Selasa-Sabtu 9.00-16.00.
  *   - https://web.archive.org/web/20230831094436/http://yayasanpulih.org/layanan-psikologi/ :
- *     "021-78842580 atau via Whatsapp 08118436633 (pada jam kerja dan hari kerja)".
- *   - Live yayasanpulih.org (2026-10-14): expired TLS certificate and a hosting
- *     placeholder page, so no website link is shown. Exact clock hours
- *     (09:00-17:00) appear only in media, so they are not claimed.
+ *     confirms phone and WhatsApp line. Previous domain yayasanpulih.org had
+ *     expired TLS as of 2026-10-14; canonical domain is now yayasanpulih.or.id.
  * tepsa-kemensos
  *   - https://kemensos.go.id/en/childrens-social-service-telephone-tepsa-ready-to-receive-online-services
  *     (Kemensos, 9 Apr 2020): "TePSA Call Center Service 1500771", telecounseling
@@ -96,11 +95,12 @@ export const EMERGENCY_CONTACTS: EmergencyContact[] = [
     id: 'yayasan-pulih',
     name: 'Yayasan Pulih',
     category: 'crisis_hotline',
-    phone: '021-788-42580',
-    whatsapp: '0811-8436-633',
-    availableHours: 'Hari dan jam kerja',
+    phone: '021-7884-2580',
+    whatsapp: '0811-843-6633',
+    website: 'https://yayasanpulih.or.id/',
+    availableHours: 'Operasional Kantor (Senin - Jumat: 9.00-17.00); Layanan Psikologi (Selasa - Sabtu: 9.00-16.00)',
     cost: 'tarif_standar',
-    description: 'Lembaga nirlaba pemulihan trauma, penanganan kekerasan psikososial, dan konseling.',
+    description: 'Konseling trauma dan pemulihan psikologis.',
     targetAgeBrackets: ['18-29', '30-49', '50+', '18-24', '25-34', '35-54'],
     verificationStatus: 'verified_official'
   },

@@ -2,7 +2,7 @@
 
 Task: AMD-05. Implementasi: `services/orchestrator/src/carePassportPipeline.ts`. Test: `tests/carebridge/pipeline.test.mjs`.
 
-**Status:** draf teknis. Penanganan *high distress* (§3) adalah **usulan yang menunggu persetujuan Safety/QA**. Kriteria eskalasi model dan eskalasi berkutipan di §4, frasa darurat bahasa Inggris di §2, serta rule ide pasif di §3 adalah rekomendasi SCRUM-44 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026). Langkah self-help berbasis kartu dan rencana keselamatan statis di §4.3 adalah fitur SCRUM-45 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026).
+**Status:** dokumen kebijakan definitif. Penanganan *high distress* (§3) adalah **kebijakan yang disetujui** — mekanisme penguncian state deterministik (`HUMAN_SUPPORT_RECOMMENDED` via `deterministic_high_distress`) sudah berjalan di produksi sejak 15 Okt 2026. Kriteria eskalasi model dan eskalasi berkutipan di §4, frasa darurat bahasa Inggris di §2, serta rule ide pasif di §3 adalah rekomendasi SCRUM-44 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026). Langkah self-help berbasis kartu dan rencana keselamatan statis di §4.3 adalah fitur SCRUM-45 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026).
 
 ## 1. Urutan wajib
 
@@ -20,12 +20,12 @@ Setiap permintaan Care Passport melewati urutan ini. Tidak ada langkah yang bole
 - Kontak darurat dewasa dari crisis engine ditampilkan.
 - Gerbang ini berjalan **sebelum** cek persetujuan, sehingga pengguna yang menolak AI tetap mendapat jalur bantuan.
 
-## 3. *High distress* (usulan, perlu persetujuan Safety/QA)
+## 3. *High distress* (kebijakan definitif, disetujui Safety Owner)
 
 Jika crisis engine memberi `severity: 'high'` tanpa `isCrisis`:
 - Draf tetap boleh dibuat (jika pengguna setuju AI), tetapi state **dikunci** ke `HUMAN_SUPPORT_RECOMMENDED`, dengan peringatan `deterministic_high_distress`.
 - Ini saran informatif untuk berbicara dengan profesional, **bukan** triase atau diagnosis.
-- Alternatif yang perlu ditimbang Safety/QA: menahan pembuatan draf sama sekali untuk kasus `high`.
+- Alternatif yang ditimbang Safety/QA (menahan pembuatan draf sama sekali untuk kasus `high`) **diputuskan tidak dipilih** — draf tetap dibuat untuk membantu pengguna mengartikulasikan ceritanya kepada profesional.
 - **Ide pasif tanpa rencana (SCRUM-44, disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026):** rule engine `passive-ideation` (ID) dan `en-passive-ideation` (EN) memberi `severity: 'high'` untuk frasa seperti "semua orang lebih baik tanpa aku", "lebih baik aku nggak ada", "I wish I could disappear forever", "my family would be happier without me". Level `high` dipilih karena tidak ada niat, rencana, atau sarana; bentuk eksplisit ("dunia lebih baik tanpaku", "everyone would be better off without me") tetap `crisis`. Lewat jalur §3 ini, kasus semacam itu selalu `HUMAN_SUPPORT_RECOMMENDED` apa pun kata model. Detail: `docs/CRISIS_CLASSIFICATION.md`.
 
 ## 4. Aturan eskalasi saja
