@@ -10,7 +10,7 @@
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8.svg)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Live app:** https://dengar-in.vercel.app · **Repository:** https://github.com/zlxrnn/dengar.in-2.0
+**Live app:** https://dengar-in.vertalt.my.id · **Repository:** https://github.com/zlxrnn/dengar.in-2.0
 
 ---
 
