@@ -368,3 +368,61 @@ Relevansi `mild` + `moderate` yang punya kartu: **37/38 = 97,4 %** pada kedua ru
 - **Relevansi di luar mild/moderate bersifat label, bukan kegagalan model.** `v1-high-05` mengharapkan `safety_plan`/`grounding`; kartu `safety_plan` memang tidak pernah bisa dipilih model (kebijakan §4.3), dan kasus `vague` hanya berlabel `grounding`, sehingga kartu "memberi ruang untuk perasaan sulit" (worry/low_mood/grief) dihitung tidak relevan walau masuk akal. Usulan v1.1: tambahkan topik alternatif pada label kasus `high` dan `vague`, atau hitung `safety_plan` sebagai "tidak dapat dipilih" dalam metrik relevansi. Dua kartu yang paling sering dipilih kedua model adalah `memberi-ruang-untuk-perasaan-sulit` dan kartu tidur; tidak ada kartu yang dipilih untuk kasus tanpa concern berdasar.
 - **Cakupan 74–76 %** kasus semantic punya kartu; sisanya kosong `[]`. Kosong lebih baik daripada kartu asal, dan tidak ada target cakupan. `high_distress_no_crisis` 9–10/10 punya kartu dan tetap `HUMAN_SUPPORT_RECOMMENDED` (kartu tampil bersama saran profesional).
 - **n kecil dan sintetis** (§6) tetap berlaku; relevansi topik bukan ukuran ketepatan untuk orang tertentu, dan audit manual kutipan alasan (`CAREBRIDGE_EVAL_RUBRIC.md` §1) belum dilakukan atas keluaran nyata.
+
+## 13. SCRUM-47: pembandingan kelengkapan berpasangan (15 Oktober 2026)
+
+PR implementasi [#2](https://github.com/zlxrnn/dengar.in-2.0/pull/2) sudah di-merge
+pada 15 Oktober 2026 01:52:19 UTC (08:52:19 WIB), commit
+`e2f3688c136c7ecd4448cfd98a43c28579b34d69`. Status merge tidak menggantikan
+review konten Safety/QA atau konfirmasi lisensi yang masih tercatat pada tiket.
+
+### 13.1 Metode
+
+Runner `scripts/testbench/dataset.mjs` menerima `BENCH_SYSTEM_PROMPT_FILE`
+untuk mengganti **hanya system prompt evaluasi**. SHA-256 teks prompt dicatat
+sebagai `config.systemPromptSha256`; tidak ada perubahan prompt runtime.
+Gunakan prompt dari `7312751` (2.703 karakter, sebelum SCRUM-47) dan `86fa645`
+(5.513 karakter, sesudah SCRUM-47, sebelum katalog SCRUM-45) agar perubahan
+self-help tidak ikut dianggap peningkatan ekstraksi. Pipeline, validator,
+dataset, model, anggaran token, JSON mode, timeout, dan jeda harus sama.
+
+Setelah kedua run selesai, jalankan:
+
+```bash
+node --experimental-strip-types scripts/testbench/compareCompleteness.mjs \
+  scripts/testbench/reports/dataset-BEFORE.json \
+  scripts/testbench/reports/dataset-AFTER.json
+```
+
+Ganti nama file dengan laporan run yang bersangkutan. Laporan mentah tetap
+lokal dan tidak di-commit, sesuai `COLLABORATION_RULES.md` §1.8.
+
+Pembanding menolak hash dataset, konfigurasi, model, id kasus, atau label
+band/bahasa yang tidak sama; id duplikat dan hasil mock juga ditolak.
+`known` hanya dibandingkan pada **id kasus yang sama dengan passport valid di
+kedua run**. Kasus deterministik tanpa passport dan provider unavailable
+dikecualikan, dengan jumlah kegagalan dan daftar id pengecualian tetap terlihat.
+Ringkasan memuat total/rerata `known`, jumlah kasus membaik/tetap/menurun,
+`droppedClaims`, p50 berpasangan, serta rincian per band dan bahasa.
+
+Target dilaporkan terpisah: total known meningkat, droppedClaims tidak naik,
+dan p50 tidak naik lebih dari 10%. Nol pasangan valid menghasilkan `null`,
+bukan lulus. Ukuran kelengkapan mengikuti tiga bidang inti pipeline; metrik
+ini tidak membuktikan mutu klinis atau bahwa semua fakta penting tertangkap.
+
+### 13.2 Hasil verifikasi dan hambatan live
+
+- Enam tes pembanding baru lulus; suite CareBridge **369/369** lulus.
+- `npm test` pada worktree berbasis `origin/main` commit `281d948` lulus.
+- Kedua evaluasi menggunakan seluruh 67 kasus, Gemma-4-31B-IT, JSON mode,
+  max_tokens 8192, timeout 60.000 ms, jeda 750 ms. Run berjalan bersamaan;
+  bila kelak menghasilkan data, pengaruh beban bersama terhadap latensi harus
+  tetap dicatat.
+- Pada putaran pertama masing-masing run, **55/55 kasus yang memanggil model
+  gagal di provider**; 12 kasus lain diputus gate deterministik. Probe kecil
+  ke chat-completions mengonfirmasi **HTTP 429**. Proses dihentikan saat
+  pengulangan otomatis mulai; tidak ada laporan lengkap yang dipakai sebagai
+  bukti kualitas. Tidak ada hasil before/after yang dikarang.
+- **Acceptance perbandingan kualitas SCRUM-47 masih tertahan provider**.
+  Ulangi kedua run setelah rate limit/kuota pulih. Hasil latensi historis §11
+  bukan pengganti pengukuran kelengkapan berpasangan ini.
