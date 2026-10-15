@@ -8,12 +8,23 @@ export const GEMINI_TTS_MODEL = 'gemini-3.8-flash-lite-tts';
 export const GEMINI_TTS_VOICE = 'Vindemiatrix';
 export const GEMINI_TTS_MIME_TYPE = 'audio/wav';
 export const GEMINI_TTS_SAMPLE_RATE = 24_000;
-// Hangat dan ekspresif, bukan datar: intonasi mengikuti makna tiap kalimat.
+// Delivery directions stay in metadata; validated display text is spoken verbatim.
+// See https://ai.google.dev/gemini-api/docs/speech-generation
 export const GEMINI_TTS_STYLE =
-  'warm, gentle, conversational Indonesian, like a caring friend who is listening; '
-  + 'natural expressive intonation that follows the meaning of each sentence, questions rise softly, '
-  + 'reassuring lines are slower and softer; relaxed pace with natural pauses at commas and full stops; '
-  + 'not monotone, not robotic, not overly cheerful';
+  'An intimate, relaxed conversation with one supportive friend. Warm, grounded, attentive delivery '
+  + 'at a comfortable everyday pace. Speak in natural thought groups, connecting words smoothly; '
+  + 'brief pauses within a thought and a little more space between complete thoughts. '
+  + 'Use subtle, varied pitch and selective emphasis on the meaningful words. '
+  + 'Let statements settle gently; let questions sound curious, with intonation shaped by their meaning. '
+  + 'Acknowledge difficult feelings with a slightly softer tone, then return to a steady conversational pace. '
+  + 'For Indonesian, use a natural contemporary Indonesian accent and casual spoken rhythm; '
+  + 'pronounce colloquial words fluently and English loanwords naturally in context. '
+  + 'For English text, use natural conversational English pronunciation and rhythm. '
+  + 'When Indonesian and English occur together, follow each phrase naturally without '
+  + 'translating, expanding abbreviations, or changing the supplied words or numbers. '
+  + 'Keep articulation clear and easy, without stretching syllables, a sing-song cadence, '
+  + 'a breathy whisper, theatrical sadness, or an announcer delivery. '
+  + 'Read only the supplied words, without adding fillers, laughter, or spoken directions.';
 export const GEMINI_TTS_MAX_TEXT_CHARS = 400;
 export const GEMINI_TTS_MAX_AUDIO_BYTES = 1_500_000;
 export const GEMINI_TTS_MAX_BASE64_CHARS = Math.ceil(GEMINI_TTS_MAX_AUDIO_BYTES / 3) * 4;
