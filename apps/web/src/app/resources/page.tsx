@@ -69,6 +69,9 @@ export default function ResourcesPage() {
         <p className="text-base sm:text-lg text-[#4A453E] leading-relaxed max-w-[34rem]">
           {t.intro}
         </p>
+        <a href="/support-options" className="inline-flex items-center min-h-[44px] text-base font-bold text-ink underline underline-offset-4 decoration-2 rounded focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE]">
+          {lang === 'en' ? 'See sources, verification dates and limits' : 'Lihat sumber, tanggal verifikasi, dan batasnya'}
+        </a>
       </div>
 
       {/* Search & Filter Bar */}

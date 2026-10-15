@@ -42,6 +42,8 @@ const id = {
     // Label ringkas di baris atas desktop lg-xl (lebar 74px pada font tebal 14px).
     carePassportShort: 'Konsultasi',
     resources: 'Bantuan & Kontak Resmi',
+    supportOptions: 'Pilihan Bantuan Terverifikasi',
+    reviewDemo: 'Demo Reviewer (Sintetis)',
     help: 'Bantuan',
     helpFull: 'Bantuan dan kontak resmi',
     emergency: 'Darurat',
@@ -202,6 +204,8 @@ const en: typeof id = {
     carePassport: 'Consultation Notes',
     carePassportShort: 'Care notes',
     resources: 'Help & Official Contacts',
+    supportOptions: 'Verified Support Options',
+    reviewDemo: 'Reviewer Demo (Synthetic)',
     help: 'Help',
     helpFull: 'Help and official contacts',
     emergency: 'Emergency',

@@ -35,6 +35,8 @@ export function Footer() {
     // Di navigasi atas tautan ini baru tampil mulai 1536px; di sini
     // selalu ada supaya tetap terjangkau di laptop.
     { href: '/care-passport', label: nav.carePassport },
+    { href: '/support-options', label: nav.supportOptions },
+    { href: '/review-demo', label: nav.reviewDemo },
   ];
 
   return (

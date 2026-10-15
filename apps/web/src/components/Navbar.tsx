@@ -22,6 +22,7 @@ import {
   X,
   ChevronDown,
   MessagesSquare,
+  ShieldCheck,
 } from 'lucide-react';
 import { AccessibilityMenu, QuickExitButton } from './ui';
 import { LanguageQuickButton, LanguageSwitch, commonText, useText } from '@/i18n';
@@ -289,6 +290,8 @@ export function Navbar() {
     { href: '/ruang-ngobrol', label: t.chatVoiceFull, icon: Mic },
     ...centerLinks,
     { href: '/resources', label: t.resources, icon: HelpCircle },
+    { href: '/support-options', label: t.supportOptions, icon: ShieldCheck },
+    { href: '/review-demo', label: t.reviewDemo, icon: ClipboardList },
   ];
 
   const secondaryMobileLinks = [
