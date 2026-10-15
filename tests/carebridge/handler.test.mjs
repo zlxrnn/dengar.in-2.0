@@ -23,6 +23,8 @@ const STORY = 'Aku kewalahan dengan tugas kuliah. Kalau deadline berdekatan, aku
 const JOURNAL = 'Udah hampir tiga minggu aku susah fokus dan sulit tidur.';
 const CRISIS = 'Aku capek, rasanya pengen mati aja.';
 const WITH_PHONE = 'Namaku Rina Pratiwi. Dosen sering menghubungi di 0812-3456-7890 soal tugas.';
+const WITH_HARD_PII =
+  'Nama saya D\'Angelo. Emailku test+alias@sub.mail-contoh.id, NIK 3273000000000001, dan nomor 0812-3456-7890.';
 
 const seg = (id, kind, text, date) => ({ id, kind, text, ...(date ? { date } : {}) });
 const intake = (text = STORY) => seg('intake', 'intake', text);
@@ -141,6 +143,27 @@ describe('F-A handler: server-side redaction per segment', () => {
     assert.deepEqual(out.data.sanitizedSegments.map((s) => s.text).join(CARE_PASSPORT_SEGMENT_SEPARATOR), out.data.sanitizedText);
   });
 
+  it('keepSoftPii cannot release hard kinds (email/nik/phone) even when their exact ids are sent', async () => {
+    const findings = detectPii(WITH_HARD_PII);
+    const hardIds = findings
+      .filter((f) => ['email', 'nik', 'phone'].includes(f.kind))
+      .map((f) => piiFindingId('journal:2026-09-24', f));
+    const provider = spyProvider();
+    const out = await handleCarePassportRequest(
+      { segments: [intake(), journal(WITH_HARD_PII)], keepSoftPii: hardIds, aiConsent: true },
+      withProvider(provider)
+    );
+    assert.equal(out.ok, true);
+    assert.equal(provider.calls.length, 1);
+    const sent = provider.calls[0].userPrompt;
+    assert.ok(sent.includes('[EMAIL]'));
+    assert.ok(sent.includes('[NIK]'));
+    assert.ok(sent.includes('[NOMOR_TELEPON]'));
+    assert.ok(!sent.includes('test+alias@sub.mail-contoh.id'));
+    assert.ok(!sent.includes('3273000000000001'));
+    assert.ok(!sent.includes('0812-3456-7890'));
+  });
+
   it('selectSegmentFindings only ever releases soft kinds', () => {
     const findings = detectPii(WITH_PHONE);
     const all = new Set(findings.map((f) => piiFindingId('s', f)));
@@ -154,15 +177,17 @@ describe('F-A handler: server-side redaction per segment', () => {
     const provider = spyProvider();
     await handleCarePassportRequest(
       {
-        segments: [intake(WITH_PHONE)],
-        sanitizedSegments: [{ id: 'intake', kind: 'intake', text: 'teks palsu' }],
-        sanitizedText: 'teks palsu',
+        segments: [intake(WITH_HARD_PII)],
+        sanitizedSegments: [{ id: 'intake', kind: 'intake', text: 'teks palsu 0812-0000-1111 dan 3273000000000001' }],
+        sanitizedText: 'teks palsu test@contoh.id',
         aiConsent: true,
       },
       withProvider(provider)
     );
     const sent = provider.calls[0].userPrompt;
     assert.ok(!sent.includes('teks palsu'));
+    assert.ok(sent.includes('[EMAIL]'));
+    assert.ok(sent.includes('[NIK]'));
     assert.ok(sent.includes('[NOMOR_TELEPON]'));
   });
 });
@@ -175,6 +200,8 @@ describe('F-A handler: consent, age and limits', () => {
     assert.equal(out.data.result.state, 'PROVIDER_UNAVAILABLE');
     assert.ok(out.data.result.warnings.includes('ai_consent_declined'));
     assert.equal(provider.calls.length, 0);
+    assert.equal(out.data.result.passport, undefined);
+    assert.equal(out.data.sanitizedText, undefined);
     assert.equal(out.data.sanitizedSegments, undefined);
   });
 
@@ -320,14 +347,19 @@ describe('F-A handler: warnings, failures and telemetry', () => {
   it('telemetry is metadata only and counts segments', async () => {
     const seen = [];
     await handleCarePassportRequest(
-      { segments: [intake(), journal(WITH_PHONE)], aiConsent: true },
+      { segments: [intake(), journal(WITH_HARD_PII)], aiConsent: true },
       withProvider(spyProvider(), (meta) => seen.push(meta))
     );
     assert.equal(seen.length, 1);
     const serialized = JSON.stringify(seen[0]);
-    assert.ok(!serialized.includes('kewalahan') && !serialized.includes('0812') && !serialized.includes('Rina'));
+    assert.ok(!serialized.includes('kewalahan'));
+    assert.ok(!serialized.includes('0812'));
+    assert.ok(!serialized.includes('D\'Angelo'));
+    assert.ok(!serialized.includes('test+alias@sub.mail-contoh.id'));
+    assert.ok(!serialized.includes('3273000000000001'));
     assert.equal(seen[0].segmentsCount, 2);
-    assert.equal(seen[0].findings, 2);
+    assert.equal(seen[0].findings, 4);
+    assert.ok(seen[0].warningCodes.every((code) => /^[a-z0-9_]+$/.test(code)));
     assert.equal(seen[0].isAmd, true);
     assert.equal(seen[0].state, 'READY_FOR_USER_REVIEW');
   });

@@ -73,6 +73,8 @@ Yang **tidak** dijanjikan: kartu bukan intervensi klinis dan tidak dipersonalisa
 
 - Tidak ada panggilan AI. State: `PROVIDER_UNAVAILABLE`, `provenance.isFallback = true`, peringatan `ai_consent_declined`.
 - UI menawarkan penulisan catatan manual. Tidak ada teks yang menyiratkan bahwa ringkasan AI sudah dibuat.
+- Persetujuan inferensi AI **terpisah** dari aksi berbagi/ekspor. Menolak AI tidak mengubah hak pengguna untuk mengelola catatan lokalnya sendiri; yang diblokir hanya panggilan model.
+- Ekspor lokal (`.md`/`.txt`) tetap butuh persetujuan pengguna pada draf (`reviewStatus: user_approved`) dan dibangun sepenuhnya di browser, tanpa ketergantungan pada izin inferensi AI.
 
 ## 6. Provider gagal
 
@@ -85,6 +87,8 @@ Yang **tidak** dijanjikan: kartu bukan intervensi klinis dan tidak dipersonalisa
 - Pipeline tidak memakai cache respons AI. Intake sensitif **tidak** melewati `aiCache`.
 - Teks mentah, teks tersanitasi, dan isi passport tidak boleh masuk log atau metrik. Yang boleh dicatat hanya metadata: state, `providerId`, `latencyMs`, `droppedClaims`, dan kode peringatan.
 - Pesan error provider dicatat di `warnings` untuk debugging. Lapisan API (AMD-09) wajib memastikan pesan itu tidak memuat isi teks pengguna sebelum dicatat.
+- Kebijakan retensi/penghapusan: server bersifat stateless untuk intake ini (tidak menyimpan teks di database, Redis, atau disk). Draf hanya berada di memori sesi browser (state React) dan hilang saat refresh.
+- Pengguna dapat menghapus jejak lokal kapan saja lewat reset alur atau data wipe `/recovery`; metrik lokal non-teks ikut dihapus pada alur wipe tersebut.
 
 ## 8. Keterbatasan
 

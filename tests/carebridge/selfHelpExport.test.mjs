@@ -86,6 +86,23 @@ describe('Care Passport export: self-help steps (SCRUM-45)', () => {
     assert.equal(buildCarePassportExport({ ...base, reviewStatus: 'user_pending', selfHelp: picks }, { format: 'md', generatedAt: when }), null);
   });
 
+  it('builds local export without any network call', () => {
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = async () => {
+      calls += 1;
+      throw new Error('should not be called');
+    };
+    try {
+      const md = buildCarePassportExport({ ...base, selfHelp: picks }, { format: 'md', generatedAt: when });
+      assert.ok(md);
+      assert.equal(calls, 0);
+    } finally {
+      if (originalFetch) globalThis.fetch = originalFetch;
+      else delete globalThis.fetch;
+    }
+  });
+
   it('i18n: every self-help key exists in both languages with the same shape (runtime check next to tsc)', () => {
     const shape = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, typeof v === 'object' && v !== null ? shape(v) : typeof v]));
     assert.deepEqual(shape(carePassportText.en.review.selfHelp), shape(carePassportText.id.review.selfHelp));

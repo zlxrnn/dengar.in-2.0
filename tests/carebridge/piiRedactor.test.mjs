@@ -92,6 +92,25 @@ describe('PII detection and redaction (AMD-06)', () => {
     assert.deepEqual(kinds('kode 1234 5678 9012 3456'), []);
   });
 
+  it('edge-case NIK boundaries: exactly 16 contiguous digits are detected, spaced/leetspeak variants are not', () => {
+    assert.deepEqual(kinds('NIK sintetis: (3273000000000001).'), ['nik']);
+    assert.ok(!kinds('NIK disamarkan: 3273 0000 0000 0001.').includes('nik'));
+    assert.ok(!kinds('NIK leetspeak: 3273OO0000000001.').includes('nik'));
+  });
+
+  it('edge-case Indonesian phones: +62/62/08 with separators are detected, out-of-bound lengths are ignored', () => {
+    const valid = ['+62 812-3456-7890', '62812.3456.7890', '0812 345 6789'];
+    for (const number of valid) assert.deepEqual(kinds(`Kontak sintetis ${number}`), ['phone']);
+    assert.deepEqual(kinds('Kontak pendek 0812 34'), []);
+    assert.deepEqual(kinds('Kontak kepanjangan 0812-3456-7890-1234'), []);
+  });
+
+  it('edge-case email and self-introduction names with apostrophe/hyphen stay covered', () => {
+    assert.deepEqual(kinds('Emailku test+alias@sub.mail-contoh.id untuk tes.'), ['email']);
+    assert.deepEqual(kinds("Nama saya D'Angelo, mahasiswa."), ['person_name_hint']);
+    assert.deepEqual(kinds('Nama saya Siti-Aminah, mahasiswa.'), ['person_name_hint']);
+  });
+
   it('partial acceptance only redacts chosen findings', () => {
     const input = 'Namaku Rara, emailku contoh@contoh.id, nomorku 0812-0000-1234.';
     const findings = detectPii(input);

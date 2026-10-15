@@ -39,7 +39,7 @@ interface Candidate {
   end: number;
 }
 
-const NAME = String.raw`[A-Z][\p{Ll}'’-]+(?:\s+[A-Z][\p{Ll}'’-]+){0,2}`;
+const NAME = String.raw`[A-Z][\p{L}'’-]+(?:\s+[A-Z][\p{L}'’-]+){0,2}`;
 
 function digitsOf(value: string): string {
   return value.replace(/\D/g, '');

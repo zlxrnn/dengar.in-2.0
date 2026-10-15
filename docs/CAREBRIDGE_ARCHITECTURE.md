@@ -198,7 +198,7 @@ Ditegakkan kode sekarang (baris bertanda † dibaca dari kode tanpa test):
 Masih terbuka:
 
 - Test untuk pembungkus HTTP (`carePassportRoute.ts`, `opening/route.ts`), halaman, dan komponen.
-- Kebijakan retensi/penghapusan tertulis dan teks consent yang menyebut inferensi di infrastruktur AMD (dan, bila Token Factory dipakai, bahwa AMD menerima teks tersanitasi) belum ditinjau tim.
+- Kebijakan retensi/penghapusan tertulis untuk CareBridge sudah ditetapkan di `docs/CAREBRIDGE_SAFETY_POLICY.md` (§5 dan §7): inferensi AI dipisah dari ekspor lokal, server stateless untuk intake, draf hidup di memori browser, dan wipe `/recovery` menghapus jejak lokal.
 
 Apa yang **tidak** dijanjikan: anonimitas total. `piiRedactor` deterministik dan konservatif (nama hanya dideteksi setelah frasa perkenalan), jadi pratinjau redaksi tetap meminta pengguna memeriksa sendiri.
 
