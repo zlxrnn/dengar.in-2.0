@@ -1,0 +1,13 @@
+[Unit]
+Description=Build and deploy latest Dengar.in main revision
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+[Service]
+Type=oneshot
+Environment=DENGARIN_ROOT=/opt/dengarin
+ExecStart=/opt/dengarin/deploy.sh
+TimeoutStartSec=30min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

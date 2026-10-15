@@ -1,0 +1,64 @@
+name: dengarin
+services:
+  dengarin-postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dengarin
+      POSTGRES_USER: dengarin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    command: [postgres, -c, ssl=on, -c, ssl_cert_file=/run/postgres-certs/server.crt, -c, ssl_key_file=/run/postgres-certs/server.key]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./tls/server.crt:/run/postgres-certs/server.crt:ro
+      - ./tls/server.key:/run/postgres-certs/server.key:ro
+    networks: [internal]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U dengarin -d dengarin]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: &logging
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  dengarin-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [redis-server, --save, '', --appendonly, 'no', --maxmemory, 256mb, --maxmemory-policy, allkeys-lru]
+    networks: [internal]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logging
+  dengarin-web:
+    image: ${DENGARIN_IMAGE:?Set DENGARIN_IMAGE}
+    container_name: dengarin-web
+    restart: unless-stopped
+    env_file: ./secrets.env
+    environment:
+      REDIS_URL: redis://dengarin-redis:6379
+      DATABASE_URL: postgresql://dengarin:${POSTGRES_PASSWORD}@dengarin-postgres:5432/dengarin
+      DATABASE_CA_FILE: /run/certs/ca.crt
+    volumes:
+      - ./tls/ca.crt:/run/certs/ca.crt:ro
+    networks: [internal, edge]
+    depends_on:
+      dengarin-postgres: {condition: service_healthy}
+      dengarin-redis: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+    logging: *logging
+volumes:
+  postgres_data:
+networks:
+  internal:
+    internal: true
+  edge:
+    external: true
+    name: ${DENGARIN_EDGE_NETWORK:-vps_default}

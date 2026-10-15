@@ -1,0 +1,9 @@
+[Unit]
+Description=Check Dengar.in GitHub main every minute
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=60s
+RandomizedDelaySec=10s
+Unit=dengarin-update.service
+[Install]
+WantedBy=timers.target
