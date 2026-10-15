@@ -26,6 +26,8 @@ if [[ $(docker image inspect --format '{{index .Config.Labels "org.opencontainer
   docker build --label "org.opencontainers.image.revision=$wanted" -f source/apps/web/Dockerfile -t "dengarin-web:$wanted" source
 fi
 previous=$(cat release.env 2>/dev/null || true)
+# An interrupted first rollout can leave release.env without a healthy release.
+[[ -n $active ]] || previous=''
 printf 'DENGARIN_IMAGE=dengarin-web:%s\n' "$wanted" > release.next
 chmod 600 release.next
 mv release.next release.env
@@ -33,13 +35,13 @@ compose=(docker compose --env-file secrets.env --env-file release.env -f compose
 rollback() {
   if [[ -n $previous ]]; then
     printf '%s\n' "$previous" > release.env
-    "${compose[@]}" up -d --wait --wait-timeout 150 dengarin-web
+    "${compose[@]}" up -d --wait --wait-timeout 600 dengarin-web
     printf 'Restored previous application image\n' >&2
   fi
 }
-if ! "${compose[@]}" up -d --wait --wait-timeout 150 dengarin-postgres dengarin-redis; then rollback; exit 1; fi
+if ! "${compose[@]}" up -d --wait --wait-timeout 600 dengarin-postgres dengarin-redis; then rollback; exit 1; fi
 if ! "${compose[@]}" run --rm --no-deps dengarin-web npm run db:migrate; then rollback; exit 1; fi
-if ! "${compose[@]}" up -d --wait --wait-timeout 150 dengarin-web; then rollback; exit 1; fi
+if ! "${compose[@]}" up -d --wait --wait-timeout 600 dengarin-web; then rollback; exit 1; fi
 printf '%s\n' "$wanted" > active-revision.next
 mv active-revision.next active-revision
 printf 'Deployed healthy revision %s\n' "$wanted"
