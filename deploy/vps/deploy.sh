@@ -40,7 +40,7 @@ rollback() {
   fi
 }
 if ! "${compose[@]}" up -d --wait --wait-timeout 600 dengarin-postgres dengarin-redis; then rollback; exit 1; fi
-if ! "${compose[@]}" run --rm --no-deps dengarin-web npm run db:migrate; then rollback; exit 1; fi
+if ! "${compose[@]}" run --rm --no-deps dengarin-web node --experimental-strip-types services/persistence/scripts/migrate.ts; then rollback; exit 1; fi
 if ! "${compose[@]}" up -d --wait --wait-timeout 600 dengarin-web; then rollback; exit 1; fi
 printf '%s\n' "$wanted" > active-revision.next
 mv active-revision.next active-revision

@@ -36,7 +36,9 @@ for this public repository. A file lock prevents overlapping deployments.
 
 A new revision is built before replacing the running application. A preloaded
 image is reused only when its OCI revision label matches that exact commit. Database
-migrations run before the new web container starts. The updater only records
+migrations run before the new web container starts.
+Both migration and web startup call Node directly, avoiding nested npm workspace
+processes on the VPS. The updater only records
 `active-revision` after Compose reports healthy. Build failures leave the old
 app untouched. Migration/startup failures restore the previous image when one
 exists. Database schema changes are **not** reversed by application rollback.

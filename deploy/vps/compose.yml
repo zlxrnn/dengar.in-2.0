@@ -34,6 +34,7 @@ services:
     logging: *logging
   dengarin-web:
     image: ${DENGARIN_IMAGE:?Set DENGARIN_IMAGE}
+    command: [node, node_modules/next/dist/bin/next, start, apps/web]
     container_name: dengarin-web
     restart: unless-stopped
     env_file: ./secrets.env

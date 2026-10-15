@@ -45,4 +45,4 @@ USER dengarin
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
   CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1
-CMD ["npm", "run", "start", "--workspace=apps/web"]
+CMD ["node", "node_modules/next/dist/bin/next", "start", "apps/web"]
