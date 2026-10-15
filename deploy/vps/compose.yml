@@ -1,7 +1,7 @@
 name: dengarin
 services:
   dengarin-postgres:
-    image: postgres:16-bookworm
+    image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: dengarin
@@ -14,9 +14,9 @@ services:
       - ./tls/server.key:/run/postgres-certs/server.key:ro
     networks: [internal]
     healthcheck:
-      test: [CMD-SHELL, pg_isready -U dengarin -d dengarin]
-      interval: 5s
-      timeout: 3s
+      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -U dengarin -d dengarin]
+      interval: 30s
+      timeout: 15s
       retries: 20
     logging: &logging
       driver: json-file
@@ -28,12 +28,13 @@ services:
     networks: [internal]
     healthcheck:
       test: [CMD, redis-cli, ping]
-      interval: 5s
-      timeout: 3s
+      interval: 30s
+      timeout: 15s
       retries: 20
     logging: *logging
   dengarin-web:
     image: ${DENGARIN_IMAGE:?Set DENGARIN_IMAGE}
+    command: [node, node_modules/next/dist/bin/next, start, apps/web]
     container_name: dengarin-web
     restart: unless-stopped
     env_file: ./secrets.env
@@ -49,8 +50,8 @@ services:
       dengarin-redis: {condition: service_healthy}
     healthcheck:
       test: [CMD-SHELL, wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 15s
       start_period: 20s
       retries: 12
     logging: *logging

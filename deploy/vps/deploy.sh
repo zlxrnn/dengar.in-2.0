@@ -21,8 +21,13 @@ if [[ $wanted == "$active" ]] && [[ $(docker inspect --format '{{.State.Health.S
 fi
 git -C source checkout --detach "$wanted"
 printf 'Building %s\n' "$wanted"
-docker build --label "org.opencontainers.image.revision=$wanted" -f source/apps/web/Dockerfile -t "dengarin-web:$wanted" source
+# A verified prebuilt image can be loaded by an operator, or reused after a failed rollout.
+if [[ $(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "dengarin-web:$wanted" 2>/dev/null || true) != "$wanted" ]]; then
+  docker build --label "org.opencontainers.image.revision=$wanted" -f source/apps/web/Dockerfile -t "dengarin-web:$wanted" source
+fi
 previous=$(cat release.env 2>/dev/null || true)
+# An interrupted first rollout can leave release.env without a healthy release.
+[[ -n $active ]] || previous=''
 printf 'DENGARIN_IMAGE=dengarin-web:%s\n' "$wanted" > release.next
 chmod 600 release.next
 mv release.next release.env
@@ -30,13 +35,13 @@ compose=(docker compose --env-file secrets.env --env-file release.env -f compose
 rollback() {
   if [[ -n $previous ]]; then
     printf '%s\n' "$previous" > release.env
-    "${compose[@]}" up -d --wait --wait-timeout 150 dengarin-web
+    "${compose[@]}" up -d --wait --wait-timeout 600 dengarin-web
     printf 'Restored previous application image\n' >&2
   fi
 }
-if ! "${compose[@]}" up -d --wait --wait-timeout 150 dengarin-postgres dengarin-redis; then rollback; exit 1; fi
-if ! "${compose[@]}" run --rm --no-deps dengarin-web npm run db:migrate; then rollback; exit 1; fi
-if ! "${compose[@]}" up -d --wait --wait-timeout 150 dengarin-web; then rollback; exit 1; fi
+if ! "${compose[@]}" up -d --wait --wait-timeout 600 dengarin-postgres dengarin-redis; then rollback; exit 1; fi
+if ! "${compose[@]}" run --rm --no-deps dengarin-web node --experimental-strip-types services/persistence/scripts/migrate.ts; then rollback; exit 1; fi
+if ! "${compose[@]}" up -d --wait --wait-timeout 600 dengarin-web; then rollback; exit 1; fi
 printf '%s\n' "$wanted" > active-revision.next
 mv active-revision.next active-revision
 printf 'Deployed healthy revision %s\n' "$wanted"

@@ -18,11 +18,14 @@ keys and model URLs only in that server-side file. Its permissions must be 600.
 
 Run `bash /opt/dengarin/provision-tls.sh` once. It creates a private CA and a
 certificate for `dengarin-postgres`; the web client verifies that certificate.
-The key ownership targets uid 999 in `postgres:16-bookworm`.
+The key ownership targets uid 70 in `postgres:16-alpine`. Rerunning the script
+repairs key ownership without replacing existing certificates.
 
+Append the Caddy fragment to the existing configuration, validate it, and reload
+Caddy before starting the application deployment. This allows certificate issuance
+to finish independently of image downloads; the proxy returns 502 until the app is ready.
 Install the units into `/etc/systemd/system`, run `systemctl daemon-reload`, then
-`systemctl start dengarin-update.service`. Once healthy, append the Caddy
-fragment to the existing configuration, validate it, and reload Caddy.
+`systemctl start dengarin-update.service`.
 Enable polling with `systemctl enable --now dengarin-update.timer`.
 
 ## Automatic updates
@@ -31,8 +34,11 @@ The timer checks GitHub approximately every minute after the previous attempt
 finishes. No GitHub token, webhook, or exposed deployment endpoint is required
 for this public repository. A file lock prevents overlapping deployments.
 
-A new revision is built before replacing the running application. Database
-migrations run before the new web container starts. The updater only records
+A new revision is built before replacing the running application. A preloaded
+image is reused only when its OCI revision label matches that exact commit. Database
+migrations run before the new web container starts.
+Both migration and web startup call Node directly, avoiding nested npm workspace
+processes on the VPS. The updater only records
 `active-revision` after Compose reports healthy. Build failures leave the old
 app untouched. Migration/startup failures restore the previous image when one
 exists. Database schema changes are **not** reversed by application rollback.

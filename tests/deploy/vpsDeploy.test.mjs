@@ -26,6 +26,7 @@ async function fixture(fn) {
     await writeFile(docker, `#!/bin/sh
 printf '%s\\n' "$*" >> "$DENGARIN_ROOT/calls"
 if [ "$1" = inspect ]; then printf 'healthy\\n'; exit 0; fi
+if [ "$1" = image ] && [ "$2" = inspect ]; then printf '%s\\n' "$PREBUILT_SHA"; exit 0; fi
 if [ "$1" = build ] && [ "$FAIL_STAGE" = build ]; then exit 31; fi
 case "$*" in
   *' run '*) [ "$FAIL_STAGE" != migration ] || exit 32 ;;
@@ -39,6 +40,13 @@ exit 0
     await fn({ root, sha, env, deploy: extra => run('bash', [script], { env: { ...env, ...extra } }) });
   } finally { await rm(dir, { recursive: true, force: true }); }
 }
+test('an interrupted first deployment cannot roll back to an unmigrated image', { skip: !hasFlock }, async () => fixture(async ({ root, deploy }) => {
+  await writeFile(join(root, 'release.env'), 'DENGARIN_IMAGE=dengarin-web:interrupted\n');
+  assert.notEqual(deploy({ FAIL_STAGE: 'migration' }).status, 0);
+  const calls = await readFile(join(root, 'calls'), 'utf8');
+  assert.equal(calls.split('\n').some(line => line.includes(' up ') && line.endsWith('dengarin-web')), false);
+  await assert.rejects(readFile(join(root, 'active-revision')), { code: 'ENOENT' });
+}));
 test('VPS updater deploys a new commit and skips a healthy unchanged revision', { skip: !hasFlock }, async () => fixture(async ({ root, sha, deploy }) => {
   assert.equal(deploy().status, 0);
   assert.equal((await readFile(join(root, 'active-revision'), 'utf8')).trim(), sha);
@@ -57,3 +65,10 @@ for (const stage of ['build', 'migration', 'health']) {
     assert.equal((await readFile(join(root, 'active-revision'), 'utf8')).trim(), 'previous');
   }));
 }
+
+test('VPS updater accepts an image only when its revision label matches the requested commit', { skip: !hasFlock }, async () => fixture(async ({ root, sha, deploy }) => {
+  assert.equal(deploy({ PREBUILT_SHA: sha }).status, 0);
+  const calls = await readFile(join(root, 'calls'), 'utf8');
+  assert.equal(calls.split('\n').some(l => l.startsWith('build ')), false);
+  assert.equal((await readFile(join(root, 'active-revision'), 'utf8')).trim(), sha);
+}));
