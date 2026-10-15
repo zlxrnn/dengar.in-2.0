@@ -3,18 +3,20 @@
  *
  * This is deliberately not imported by the web app and does not expose an API
  * route. It writes disposable WAV files under the OS temporary directory so a
- * reviewer can compare exactly three prebuilt voices before choosing one.
+ * reviewer can compare the production voice with two alternatives using the production style.
  */
 import { access, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import nextEnv from '@next/env';
+import { GEMINI_TTS_MODEL, GEMINI_TTS_VOICE, GEMINI_TTS_STYLE } from '../apps/web/src/lib/api/geminiTts.ts';
 
 const { loadEnvConfig } = nextEnv;
 
-const MODEL = 'gemini-3.8-flash-lite-tts';
-const VOICES = ['Sulafat', 'Achird', 'Achernar'];
-const STYLE = 'Natural conversational Indonesian. Warm, calm, casual, and grounded. Speak like a supportive young adult friend, not a narrator, announcer, customer-service agent, therapist, or motivational speaker. Moderate pace with natural Indonesian rhythm. Avoid exaggerated cheerfulness, dramatic emotion, and overly polished delivery.';
+const MODEL = GEMINI_TTS_MODEL;
+const VOICES = [GEMINI_TTS_VOICE, 'Sulafat', 'Achird'];
+const STYLE = GEMINI_TTS_STYLE;
 const LINES = [
   ['normal', 'Ya, kedengarannya hari ini lumayan berat. Kita nggak harus nyelesaiin semuanya sekarang.'],
   ['casual', 'Gapapa, cerita aja pelan-pelan. Gue dengerin.'],
@@ -22,6 +24,7 @@ const LINES = [
   ['code-switch', 'Kayaknya kamu lagi overwhelmed. Kita cari satu hal kecil yang bisa bikin malam ini sedikit lebih ringan.'],
   ['pause-empathy', 'Hm... oke. Kedengarannya itu cukup nguras energi kamu.'],
   ['question', 'Yang paling bikin kepikiran sekarang bagian yang mana?'],
+  ['english', 'That sounds like a lot to carry. What part has been weighing on you the most?'],
 ];
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 const DELAY_MS = Number(process.env.VOICE_AUDITION_DELAY_MS ?? 16_000);
@@ -95,8 +98,14 @@ loadEnvConfig(path.join(process.cwd(), 'apps/web'));
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) throw new Error('GEMINI_API_KEY is required in the local environment; no key was written or logged.');
 
-const outputDir = process.env.VOICE_AUDITION_OUTPUT_DIR
-  ?? path.join(tmpdir(), 'dengarin-voice-audition');
+// Keep previous auditions; never reuse audio made with a different direction.
+const auditionId = createHash('sha256')
+  .update(JSON.stringify({ model: MODEL, voices: VOICES, style: STYLE, lines: LINES }))
+  .digest('hex').slice(0, 12);
+const outputDir = path.join(
+  process.env.VOICE_AUDITION_OUTPUT_DIR ?? path.join(tmpdir(), 'dengarin-voice-audition'),
+  auditionId
+);
 await mkdir(outputDir, { recursive: true });
 await writeFile(path.join(outputDir, 'index.html'), auditionPage(), 'utf8');
 await writeFile(path.join(outputDir, 'manifest.json'), JSON.stringify({ model: MODEL, voices: VOICES, style: STYLE, lines: LINES }, null, 2), 'utf8');

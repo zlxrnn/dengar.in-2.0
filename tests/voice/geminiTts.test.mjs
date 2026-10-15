@@ -7,6 +7,7 @@ import {
   GEMINI_TTS_MAX_BASE64_CHARS,
   GEMINI_TTS_MODEL,
   GEMINI_TTS_VOICE,
+  GEMINI_TTS_STYLE,
   createGeminiTtsProvider,
 } from '../../apps/web/src/lib/api/geminiTts.ts';
 import { acquireTtsSlot } from '../../apps/web/src/lib/api/rateLimit.ts';
@@ -59,6 +60,29 @@ describe('Gemini TTS room enhancement', () => {
     assert.equal(request.response_format.sample_rate, 24000);
     assert.equal(request.generation_config.speech_config[0].voice, 'Vindemiatrix');
     assert.equal(request.input[0].content[0].text, 'Respons aman yang sudah divalidasi.');
+    assert.deepEqual(request.input[0].content[0].annotations, [
+      { type: 'speech_metadata', style: GEMINI_TTS_STYLE },
+    ]);
+  });
+
+  it('preserves Indonesian slang, English and code-switching transcripts verbatim', async () => {
+    const { provider, calls } = providerWith(() => new Response(JSON.stringify({
+      steps: [{ content: [{ type: 'audio', mime_type: 'audio/wav', data: validWav }] }],
+    })));
+    const texts = [
+      'Gapapa, kita urutin satu-satu dulu. Nggak perlu buru-buru.',
+      'What feels manageable for you today?',
+      'Lagi overwhelmed? Kita ambil break 5 menit dulu.',
+    ];
+    for (const text of texts) {
+      assert.equal((await provider.synthesizeValidatedText(text)).ok, true);
+    }
+    assert.deepEqual(calls.map(([, options]) => {
+      const body = JSON.parse(options.body);
+      assert.equal(body.store, false);
+      assert.equal(body.input[0].content[0].annotations[0].style, GEMINI_TTS_STYLE);
+      return body.input[0].content[0].text;
+    }), texts);
   });
 
   it('rejects malformed, oversized, and oversized-text outputs without a provider retry', async () => {
