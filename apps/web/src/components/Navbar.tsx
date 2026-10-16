@@ -254,7 +254,22 @@ export function Navbar() {
   // Ketuk di luar menu seluler (selain tombol Menu di dock) menutupnya.
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const firstAction = drawerRef.current?.querySelector<HTMLElement>('a, button');
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    // A modal must also exclude background controls from keyboard/AT navigation.
+    // Walk ancestors so the drawer itself never inherits inert from the header.
+    const background: Array<{ element: HTMLElement; inert: boolean }> = [];
+    let branch: HTMLElement = drawer;
+    while (branch.parentElement) {
+      for (const sibling of branch.parentElement.children) {
+        if (sibling === branch || !(sibling instanceof HTMLElement)) continue;
+        background.push({ element: sibling, inert: sibling.inert });
+        sibling.inert = true;
+      }
+      branch = branch.parentElement;
+      if (branch === document.body) break;
+    }
+    const firstAction = drawer.querySelector<HTMLElement>('a, button');
     firstAction?.focus();
 
     const onPointerDown = (event: PointerEvent) => {
@@ -263,8 +278,16 @@ export function Navbar() {
       setMobileMenuOpen(false);
       menuButtonRef.current?.focus();
     };
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const onDesktop = () => { if (desktop.matches) setMobileMenuOpen(false); };
+    desktop.addEventListener('change', onDesktop);
     document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      desktop.removeEventListener('change', onDesktop);
+      background.forEach(({ element, inert }) => { element.inert = inert; });
+      menuButtonRef.current?.focus();
+    };
   }, [mobileMenuOpen]);
 
   const openMobileMenu = (open: boolean) => {
@@ -324,6 +347,23 @@ export function Navbar() {
       event.stopPropagation();
       setMobileMenuOpen(false);
       menuButtonRef.current?.focus();
+      return;
+    }
+    if (event.key === 'Tab' && drawerRef.current) {
+      const controls = Array.from(drawerRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button, input, select, textarea, [tabindex]'
+      )).filter((element) => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first) {
+        event.preventDefault();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
   };
 
@@ -481,6 +521,11 @@ export function Navbar() {
                 <PhoneCall className="w-5 h-5 text-white shrink-0" aria-hidden="true" />
                 <span className="text-center">{t.emergencyMobile}</span>
               </Link>
+
+              <button type="button" onClick={() => openMobileMenu(false)} className={`inline-flex items-center gap-2 min-h-[44px] px-3 font-bold ${focusRing}`}>
+                <X className="w-5 h-5" aria-hidden="true" />
+                {t.closeMenu}
+              </button>
 
               <nav aria-label={t.mobileMenu} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {mobileNavLinks.map((item, index) => {
