@@ -4,7 +4,7 @@
 - **Tanggal**: 16 Oktober 2026
 - **Tingkat Keparahan**: **Tinggi (High)**
 - **Epic Jira**: `SCRUM-8 Privacy`
-- **Penanggung Jawab**: Immanuel Justin Elnathan
+- **Penanggung Jawab**: Justin
 - **Komponen Terdampak**:
   - `apps/web/src/app/recovery/page.tsx` (baris 134)
   - `apps/web/src/app/api/sync/route.ts`

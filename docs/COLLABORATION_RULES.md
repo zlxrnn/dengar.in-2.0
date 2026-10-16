@@ -16,7 +16,7 @@ Pemetaan wilayah mengikuti epic Jira (proyek `SCRUM`).
    - perubahan kecil (≤ 20 baris, tanpa mengubah perilaku): boleh di PR-mu, **wajib approval pemilik file**;
    - perubahan besar: minta pemilik membuat tiket/PR sendiri, atau sepakati di komentar tiket Jira dulu.
 5. **File bersama** (§3) hanya boleh diubah dalam PR kecil yang khusus untuk perubahan itu, dengan
-   approval Release Owner (Iqbal) **dan** pemilik fitur yang terdampak.
+   approval Release Owner (iqbal) **dan** pemilik fitur yang terdampak.
 6. **Minimal 1 approval** sebelum merge; merge dilakukan oleh penulis PR setelah approve, dengan *squash merge*.
 7. **Sebelum minta review:** rebase ke `main` terbaru, `npm run test` lulus (atau sebutkan test yang
    relevan dan hasilnya), sertakan bukti QA (screenshot/log) sesuai kriteria selesai tiket.
@@ -25,7 +25,7 @@ Pemetaan wilayah mengikuti epic Jira (proyek `SCRUM`).
 9. **Konflik:** yang terakhir merge wajib menyelesaikan konflik; bila konflik menyentuh wilayah orang
    lain, minta pemiliknya ikut review.
 10. **Aturan keselamatan tidak bisa ditawar:** perubahan yang menyentuh crisis gate, consent, redaksi PII,
-    atau urutan pipeline CareBridge (`docs/CAREBRIDGE_SAFETY_POLICY.md` §1) wajib approval Safety Owner (Immanuel).
+    atau urutan pipeline CareBridge (`docs/CAREBRIDGE_SAFETY_POLICY.md` §1) wajib approval Safety Owner (Justin).
 
 ## 2. Wilayah per orang
 
@@ -33,16 +33,16 @@ Pemetaan wilayah mengikuti epic Jira (proyek `SCRUM`).
 |---|---|---|
 | **I Wayan Bagus Arya Darma Wiguna** (`@YanIanZ`) | SCRUM-5 CareBridge, SCRUM-9 Core Wellbeing, SCRUM-24 Release gate | `apps/web/src/app/care-passport/`, `apps/web/src/components/carePassport/`, `apps/web/src/lib/carePassport*.ts`, `apps/web/src/lib/api/carePassport*.ts`, `apps/web/src/lib/api/openingLinesHandler.ts`, `apps/web/src/app/api/care-passport/`, `services/orchestrator/src/carePassportPipeline.ts`, `services/orchestrator/src/openingLinesPipeline.ts`, `packages/prompts/src/carePassport.ts`, `packages/prompts/src/openingLines.ts`, `tests/carebridge/` (kecuali `amdProvider.test.mjs`); halaman Core Wellbeing: `apps/web/src/app/{chat,checkin,journal,mission,resources,dashboard,perjalanan,assessment,report}/`, `apps/web/src/lib/{chatProgress,gamification,wellbeingTimeline,calendar,storage}.ts`, `apps/web/src/lib/api/{chatHandler,chatHistory,aiCache}.ts`, `apps/web/src/app/api/{chat,report}/`, `tests/{chat,gamification,assessment,session,api}/`; test bench: `scripts/testbench/`, `docker/testbench/`, `docker-compose.testbench.yml`, `docs/TESTBENCH.md`; dataset CareBridge: `proto/carebridge/`, `scripts/carebridge/`, `tests/carebridge/dataset/`, `docs/CAREBRIDGE_DATASET.md`, `docs/CAREBRIDGE_KNOWLEDGE_BASE.md`; dokumen `docs/CAREBRIDGE_ARCHITECTURE.md`, `docs/CAREBRIDGE_STRUCTURE_MERMAID.md`, `docs/CB-035_GOOGLE_DEEPMIND_GEMMA_AMD.md` |
 | **Bryan Christian Shine Mokolomban** | SCRUM-6 AMD inference | `services/orchestrator/src/providers/`, `services/orchestrator/src/orchestrator.ts`, `services/orchestrator/src/debiaser/`, `services/orchestrator/src/fallback/`, `services/orchestrator/src/guardrails/`, `tests/orchestrator/`, `tests/carebridge/amdProvider.test.mjs`, `docs/AMD_SETUP.md`, `docs/AI_POLICY.md` |
-| **Immanuel Justin Elnathan** | SCRUM-7 Safety, SCRUM-8 Privacy, SCRUM-10 Community | `services/crisis-engine/`, `services/validator/`, `services/auth/`, `services/persistence/`, `supabase/`, `apps/web/src/app/{crisis,consent,recovery,forum}/`, `apps/web/src/app/api/{forum,admin,sync}/`, `apps/web/src/lib/{consent,crisisGuard,useConsentGuard,useCrisisGuard}.ts`, `apps/web/src/lib/crypto/`, `apps/web/src/lib/api/{crisisGate,adminSession,syncAuth,threadAlias,forum*,replySchema,repositories,publicWarnings,rateLimit,requestLimits}.ts`, `apps/web/src/components/{InlineCrisisCard,SupportPathwayCard,ConsentPending}.tsx`, `tests/{crisis,validator,security,forum,crypto,auth,persistence,persistence-pg}/`, `docs/{SAFETY,CRISIS_CLASSIFICATION,CAREBRIDGE_SAFETY_POLICY,M01_RATE_LIMITING,RECOVERY_MIGRATION}.md` |
-| **Syafa Raditya Effendi** | SCRUM-11 Voice, a11y, i18n | `apps/web/src/app/ruang-ngobrol/`, `apps/web/src/i18n/`, `apps/web/src/components/ui/`, `apps/web/src/components/{SkipLink,Footer,NotFoundContent}.tsx`, `apps/web/src/lib/{browserSpeech,voiceRoom}.ts`, `apps/web/src/lib/api/geminiTts.ts`, `tests/voice/`, `docs/{VOICE_ACCESSIBILITY,VOICE_AUDITION,RUANG_NGOBROL,UX_FLOW,PRD-DESIGN}.md` |
-| **Iqbal Dovandra** (`@iqbalscript`) | SCRUM-12 Release (Release Owner) | file bersama di §3, `apps/web/Dockerfile`, `apps/web/next.config.js`, `apps/web/cache-handler.mjs`, `apps/web/src/lib/redis.ts`, `apps/web/src/app/api/{health,redis-test}/`, `tests/{infra,redis}/`, `scripts/` (kecuali `scripts/testbench/`), `.github/`, `docs/{AMD_01_SCOPE_DAN_SYARAT,AMD_TRACK2_DEVELOPMENT_PLAN,AMD_TRACK2_TASKS,DEMO_SCRIPT,REDIS*,GAP_AUDIT_*}.md` |
-| **Raditya Alvien Nugraha** | SCRUM-27/28/29 Dokumentasi | `README.md`, `docs/{PRD,PROJECT_CONTEXT,API_SPEC,SUBMISSION_COPY,Scriptwrite,SCRIPTWRITE_CHANGELOG,CAREBRIDGE_EVAL_RUBRIC}.md`, `docs/research/`, `docs/drafts/` |
+| **Justin** | SCRUM-7 Safety, SCRUM-8 Privacy, SCRUM-10 Community | `services/crisis-engine/`, `services/validator/`, `services/auth/`, `services/persistence/`, `supabase/`, `apps/web/src/app/{crisis,consent,recovery,forum}/`, `apps/web/src/app/api/{forum,admin,sync}/`, `apps/web/src/lib/{consent,crisisGuard,useConsentGuard,useCrisisGuard}.ts`, `apps/web/src/lib/crypto/`, `apps/web/src/lib/api/{crisisGate,adminSession,syncAuth,threadAlias,forum*,replySchema,repositories,publicWarnings,rateLimit,requestLimits}.ts`, `apps/web/src/components/{InlineCrisisCard,SupportPathwayCard,ConsentPending}.tsx`, `tests/{crisis,validator,security,forum,crypto,auth,persistence,persistence-pg}/`, `docs/{SAFETY,CRISIS_CLASSIFICATION,CAREBRIDGE_SAFETY_POLICY,M01_RATE_LIMITING,RECOVERY_MIGRATION}.md` |
+| **Radit** | SCRUM-11 Voice, a11y, i18n | `apps/web/src/app/ruang-ngobrol/`, `apps/web/src/i18n/`, `apps/web/src/components/ui/`, `apps/web/src/components/{SkipLink,Footer,NotFoundContent}.tsx`, `apps/web/src/lib/{browserSpeech,voiceRoom}.ts`, `apps/web/src/lib/api/geminiTts.ts`, `tests/voice/`, `docs/{VOICE_ACCESSIBILITY,VOICE_AUDITION,RUANG_NGOBROL,UX_FLOW,PRD-DESIGN}.md` |
+| **iqbal** (`@iqbalscript`) | SCRUM-12 Release (Release Owner) | file bersama di §3, `apps/web/Dockerfile`, `apps/web/next.config.js`, `apps/web/cache-handler.mjs`, `apps/web/src/lib/redis.ts`, `apps/web/src/app/api/{health,redis-test}/`, `tests/{infra,redis}/`, `scripts/` (kecuali `scripts/testbench/`), `.github/`, `docs/{AMD_01_SCOPE_DAN_SYARAT,AMD_TRACK2_DEVELOPMENT_PLAN,AMD_TRACK2_TASKS,DEMO_SCRIPT,REDIS*,GAP_AUDIT_*}.md` |
+| **Alvin** | SCRUM-27/28/29 Dokumentasi | `README.md`, `docs/{PRD,PROJECT_CONTEXT,API_SPEC,SUBMISSION_COPY,Scriptwrite,SCRIPTWRITE_CHANGELOG,CAREBRIDGE_EVAL_RUBRIC}.md`, `docs/research/`, `docs/drafts/` |
 
 Catatan:
 - `docs/CAREBRIDGE_EVAL_RUBRIC.md`: isinya diubah oleh pemilik fitur CareBridge (YanIanZ) atas
-  persetujuan Safety Owner; Raditya hanya merapikan bahasa/format.
+  persetujuan Safety Owner; Alvin hanya merapikan bahasa/format.
 - Tiket yang di-assign ke seseorang tetapi berada di epic orang lain (mis. SCRUM-23 voice milik YanIanZ
-  di epic Syafa) mengikuti aturan §1.4: wajib approval pemilik wilayah.
+  di epic Radit) mengikuti aturan §1.4: wajib approval pemilik wilayah.
 
 ## 3. File bersama (approval Release Owner + pemilik fitur terdampak)
 
