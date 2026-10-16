@@ -248,7 +248,7 @@ describe('Automated Security & Abuse Test Suite (Track 2 Acceptance)', () => {
       assert.equal(exported, null, 'Must refuse export when reviewStatus !== user_approved');
     });
 
-    it('identifies markdown link injection in exported documents (BUG-11 baseline)', () => {
+    it('escapes user-authored markdown links in exported documents (BUG-11)', () => {
       const approvedPassport = {
         version: 1,
         reviewStatus: 'user_approved',
@@ -263,8 +263,8 @@ describe('Automated Security & Abuse Test Suite (Track 2 Acceptance)', () => {
 
       const exported = buildCarePassportExport(approvedPassport, { format: 'md' });
       assert.ok(exported, 'Export should succeed for approved passport');
-      // Demonstrates current behavior: Markdown links are currently passed through
-      assert.ok(exported.includes('[Klinik Bantuan](https://phishing-domain.invalid)'));
+      assert.ok(!exported.includes('[Klinik Bantuan](https://phishing-domain.invalid)'));
+      assert.ok(exported.includes('\\[Klinik Bantuan\\](https://phishing\\-domain.invalid)'));
     });
   });
 

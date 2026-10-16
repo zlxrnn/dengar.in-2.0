@@ -1,5 +1,5 @@
-import type { CarePassport, EvidenceField, SelfHelpSuggestion } from '@dengarin/types';
-import { getSelfHelpCard, selfHelpAttribution, selfHelpLicenseLabel } from '@dengarin/config';
+import type { CarePassport, CarePassportProvenance, EvidenceField, SelfHelpSuggestion } from '@dengarin/types';
+import { getSelfHelpCard, selfHelpAttribution, selfHelpLicenseLabel, type HelpDestinationId } from '@dengarin/config';
 import { LOCALE_TAG, type Language } from '../i18n/language.ts';
 import { carePassportText } from '../i18n/pages/carePassport.ts';
 
@@ -56,9 +56,38 @@ function datedSourceSuffix(field: EvidenceField, lang: Language): string {
   return ` (${ref.kind === 'journal' ? text.journal : text.checkin}, ${when})`;
 }
 
-function presentValues(fields: EvidenceField[], lang: Language): string[] {
+/** User text is literal content, never Markdown structure or inline HTML. */
+function exportText(value: string, md: boolean): string {
+  if (!md) return value;
+  return value.replace(/[\\`*_{}\[\]<>!|~#+-]/g, '\\$&').replace(/\r\n?|\n/g, ' ');
+}
+
+export interface OpeningLinesSelection {
+  destinationId: HelpDestinationId;
+  destinationLabel: string;
+  lines: string[];
+  provenance: CarePassportProvenance;
+  verifiedOn: string;
+}
+
+/** The editable appendix shares the same literal-text boundary as the passport. */
+export function openingLinesExportText(selection: OpeningLinesSelection, format: 'md' | 'txt', lang: Language = 'id'): string {
+  const t = carePassportText[lang].opening;
+  const md = format === 'md';
+  const lines = selection.lines.map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) return '';
+  const heading = exportText(t.exportHeading(selection.destinationLabel), md);
+  const how = selection.provenance.isAmd
+    ? t.exportHowAmd
+    : selection.provenance.isFallback
+      ? t.exportHowFallback
+      : t.exportHowOther(selection.provenance.providerId);
+  return [md ? `## ${heading}` : heading, ...lines.map((line, i) => `${i + 1}. ${exportText(line, md)}`), exportText(how, md), ''].join('\n');
+}
+
+function presentValues(fields: EvidenceField[], lang: Language, md: boolean): string[] {
   return fields
-    .map((f) => (typeof f.value === 'string' && f.value.trim() ? `${f.value.trim()}${datedSourceSuffix(f, lang)}` : ''))
+    .map((f) => (typeof f.value === 'string' && f.value.trim() ? `${exportText(f.value.trim(), md)}${datedSourceSuffix(f, lang)}` : ''))
     .filter((v) => v.length > 0);
 }
 
@@ -94,14 +123,14 @@ export function buildCarePassportExport(
   const lines: string[] = [];
   lines.push(h1(text.title));
   lines.push(text.generated(formatDate(date, lang)));
-  if (options.provenanceLabel) lines.push(options.provenanceLabel);
+  if (options.provenanceLabel) lines.push(exportText(options.provenanceLabel, md));
   lines.push('');
 
   const sections: Array<[string, string[]]> = [
-    [labels.concerns, presentValues(passport.concerns, lang)],
-    [labels.dailyImpact, presentValues(passport.dailyImpact, lang)],
-    [labels.duration, presentValues([passport.duration], lang)],
-    [labels.relevantContext, presentValues(passport.relevantContext, lang)],
+    [labels.concerns, presentValues(passport.concerns, lang, md)],
+    [labels.dailyImpact, presentValues(passport.dailyImpact, lang, md)],
+    [labels.duration, presentValues([passport.duration], lang, md)],
+    [labels.relevantContext, presentValues(passport.relevantContext, lang, md)],
   ];
   for (const [label, values] of sections) {
     lines.push(h2(label));
@@ -116,13 +145,13 @@ export function buildCarePassportExport(
   lines.push(h2(labels.questionsForProfessional));
   const questions = passport.questionsForProfessional.map((q) => q.trim()).filter(Boolean);
   if (questions.length === 0) lines.push(text.noQuestions);
-  else questions.forEach((q, i) => lines.push(`${i + 1}. ${q}`));
+  else questions.forEach((q, i) => lines.push(`${i + 1}. ${exportText(q, md)}`));
   lines.push('');
 
   const unknowns = passport.unknowns.map((u) => u.trim()).filter(Boolean);
   if (unknowns.length > 0) {
     lines.push(h2(labels.unknowns));
-    for (const u of unknowns) lines.push(bullet(u));
+    for (const u of unknowns) lines.push(bullet(exportText(u, md)));
     lines.push('');
   }
 
@@ -134,7 +163,7 @@ export function buildCarePassportExport(
   }
 
   lines.push(h2(text.important));
-  lines.push(quoteBlock(passport.disclaimer));
+  lines.push(quoteBlock(exportText(passport.disclaimer, md)));
   lines.push('');
 
   return lines.join('\n');
@@ -154,7 +183,7 @@ function selfHelpExportLines(items: SelfHelpSuggestion[], lang: Language, md: bo
   for (const { item, card } of cards) {
     if (!card) continue;
     out.push(md ? `### ${card.title[lang]}` : card.title[lang].toUpperCase());
-    out.push(`${text.why}: "${item.reasonQuote}"`);
+    out.push(`${text.why}: "${exportText(item.reasonQuote, md)}"`);
     card.steps[lang].forEach((step, i) => out.push(`${i + 1}. ${step}`));
     out.push(`${text.seekHelp}: ${card.seekHelpWhen[lang]}`);
     if (card.cautions) out.push(`${text.cautions}: ${card.cautions[lang]}`);
