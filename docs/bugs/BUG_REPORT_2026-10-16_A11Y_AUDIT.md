@@ -1,3 +1,5 @@
+> Ralat audit SCRUM-22, 16 Oktober 2026: laporan historis di bawah bukan bukti WCAG penuh. Bug modal benar-benar direproduksi pada Chromium dan diperbaiki pada branch audit, dengan tests/browser/mobileMenuFocus.test.mjs. Klaim forced-colors dan matriks browser lain belum direvalidasi. Lihat docs/eval/A11Y_AUDIT_REPORT_2026-10-16.md untuk hasil yang terukur.
+
 # Laporan Penemuan Bug Aksesibilitas & UI (CareBridge Track 2)
 
 Tanggal: 16 Oktober 2026  

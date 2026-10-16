@@ -8,6 +8,13 @@
     "packages/*",
     "services/*"
   ],
+  "overrides": {
+    "next": {
+      "postcss": "^8.5.23"
+    },
+    "sharp": "^0.35.5",
+    "source-map-js": "^1.2.2"
+  },
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",

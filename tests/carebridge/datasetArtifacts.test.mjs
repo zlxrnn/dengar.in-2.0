@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { ARTIFACTS, ARTIFACT_DIR, REPO_ROOT } from '../../scripts/carebridge/build-dataset.mjs';
+import { ARTIFACTS, ARTIFACT_DIR, REPO_ROOT, canonicalizeTextSource } from '../../scripts/carebridge/build-dataset.mjs';
 import { SelfHelpCardSet, casesToMessage, cardsToMessage, decode, encode, messageToCases, messageToCards } from '../../scripts/carebridge/datasetCodec.mjs';
 
 const manifest = JSON.parse(readFileSync(`${REPO_ROOT}${ARTIFACT_DIR}manifest.json`, 'utf8'));
@@ -28,7 +28,7 @@ describe('CareBridge dataset artifacts (Protobuf + zstd)', () => {
 
   for (const entry of manifest.artifacts) {
     it(`${entry.artifact} is fresh and round-trips to ${entry.source}`, () => {
-      const raw = readFileSync(`${REPO_ROOT}${entry.source}`);
+      const raw = canonicalizeTextSource(readFileSync(`${REPO_ROOT}${entry.source}`));
       const packed = readFileSync(`${REPO_ROOT}${entry.artifact}`);
       assert.equal(sha256(raw), entry.sourceSha256, `${entry.source} berubah: jalankan npm run dataset:build`);
       assert.equal(sha256(packed), entry.artifactSha256);
@@ -40,6 +40,11 @@ describe('CareBridge dataset artifacts (Protobuf + zstd)', () => {
       assert.deepEqual(decoded, readSource(entry.source, raw.toString('utf8')));
     });
   }
+
+  it('canonicalizes platform line endings without changing reviewed source content', () => {
+    const source = Buffer.from('first\r\nsecond\rthird\n', 'utf8');
+    assert.deepEqual(canonicalizeTextSource(source), Buffer.from('first\nsecond\nthird\n', 'utf8'));
+  });
 
   it('rejects values outside the schema vocabulary', () => {
     assert.throws(() => cardsToMessage('v1', [{ id: 'x', topics: ['bukan_topik'] }]), /tidak dikenal/);

@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 const APP_DIR = fileURLToPath(new URL('../../apps/web/src/app/', import.meta.url));
 const COMPONENTS_DIR = fileURLToPath(new URL('../../apps/web/src/components/', import.meta.url));
 
-/** Routes that must stay reachable without consent (help must never be gated). */
-const UNGUARDED_ROUTES = new Set(['/', '/consent', '/crisis', '/resources']);
+/** Static help must stay reachable without consent; interactive demos are guarded. */
+const UNGUARDED_ROUTES = new Set(['/', '/consent', '/crisis', '/resources', '/support-options']);
 
 function findPages(dir) {
   const pages = [];
@@ -58,12 +58,29 @@ describe('H5: consent guard coverage', () => {
     }
   });
 
-  it('keeps the unguarded allowlist exactly landing, consent, crisis and resources', () => {
+  it('keeps the unguarded allowlist limited to static public information', () => {
     const unguarded = pages
       .filter(({ source }) => !/useConsentGuard\(\)/.test(source))
       .map(({ route }) => route)
       .sort();
     assert.deepEqual(unguarded, [...UNGUARDED_ROUTES].sort());
+  });
+
+  it('public review and support pages do not collect or send private intake', () => {
+    for (const route of ['/review-demo', '/support-options']) {
+      const source = read(route);
+      assert.doesNotMatch(source, /<textarea\b|<form\b|fetch\s*\(|localStorage|sessionStorage|navigator\.mediaDevices/,
+        `${route} must not collect or transmit private intake`);
+    }
+  });
+
+  it('guards the interactive review demo and keeps it synthetic', () => {
+    const source = read('/review-demo');
+    assert.match(source, /import \{ useConsentGuard \} from '@\/lib\/useConsentGuard'/);
+    assert.match(source, /useConsentGuard\(\)/);
+    assert.match(source, /if \(!ready\) return <ConsentPending \/>;/);
+    assert.match(source, /REVIEW_DEMO_NOTICES\.synthetic/);
+    assert.match(source, /REVIEW_DEMO_NOTICES\.noRealIntake/);
   });
 
   it('covers the pages added in this pass', () => {

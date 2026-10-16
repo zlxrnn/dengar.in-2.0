@@ -89,6 +89,14 @@ describe('Care Passport prompt: extraction rules (SCRUM-47)', () => {
     has('dukungan yang ada atau belum');
   });
 
+  it('preserves approximate user time spans without inventing precision or confusing frequency', () => {
+    has('Frasa perkiraan ("belakangan ini", "lately") tetap dicatat verbatim');
+    has('bukan diubah menjadi angka');
+    has('"twice last month" berarti duration "last month"');
+    has('"twice" tetap frekuensi');
+    has('Jangan kosongkan durasi hanya karena tanggal awal tidak diketahui');
+  });
+
   it('asks for 3-5 non-leading questions tied to one stated fact each, without naming disorders or medication', () => {
     has('3 sampai 5 pertanyaan');
     has('menyambung ke SATU fakta yang disebut pengguna');

@@ -31,7 +31,7 @@ previously matched nothing and were left to the model. For Care Passport,
 model; for chat it attaches the deterministic support pathway. Nothing was
 lowered: "dunia lebih baik tanpaku", "aku ingin menghilang selamanya" and
 "everyone would be better off without me" still return `crisis`. Approved as
-part of the SCRUM-44 recommendations (disetujui Immanuel, dilaporkan YanIanZ
+part of the SCRUM-44 recommendations (disetujui Justin, dilaporkan YanIanZ
 15 Okt 2026). Negatives kept out on purpose: a trailing place ("lebih baik aku
 nggak ada di rapat itu"), hyperbole without "forever/for good" ("I wish I could
 disappear after that meeting"), and other subjects ("the team would be better

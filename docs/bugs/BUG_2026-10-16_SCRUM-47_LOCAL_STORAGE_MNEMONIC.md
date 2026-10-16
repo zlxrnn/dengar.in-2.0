@@ -3,6 +3,8 @@
 Task audit: [SCRUM-19](https://iqbaldovandraa.atlassian.net/browse/SCRUM-19).
 Nama file historis menyebut SCRUM-47 secara keliru; tiket itu adalah task prompt, bukan bug ini.
 
+**Pemilik area:** Justin (Safety/Privacy).
+
 ## Teramati
 
 `initAnonymousSession`/`saveAnonymousSession` menyimpan recoveryMnemonic pada `dengarin_anonymous_session` dalam localStorage. Baseline pada `tests/security/abuseChecks.test.mjs` membuktikannya dengan storage sintetis. Catatan lokal juga dapat dibaca oleh orang yang mengakses profil peramban yang sama.

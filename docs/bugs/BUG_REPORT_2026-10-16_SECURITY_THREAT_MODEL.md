@@ -22,3 +22,9 @@ Export tidak ditandatangani secara digital dan tidak membuktikan integrasi klini
 - `tests/carebridge/exportMarkup.test.mjs`: 5 tes, mencakup seluruh field, lampiran, format txt, approval gate, dan atribusi KB.
 - Pemeriksaan sintetis dengan markdown-it 15.0.3 (`html: true`): sebelum patch terbentuk anchor, image dan raw script; sesudah patch ketiganya tidak terbentuk, termasuk pada lampiran.
 - Lint dan typecheck lulus. Pemeriksaan ini bukan bukti deployment produksi.
+
+## Integrasi ulang setelah main diperbarui
+
+PR #13 menyerap main `8cb7669` dan menyelesaikan konflik dengan perubahan nama PIC. Pemilik area risiko storage/sync tetap Justin. Guard demo dan tes consent mengikuti keputusan main PR #11; tidak menggunakan koreksi allowlist sementara dari PR #8.
+
+Verifikasi checkout gabungan final: `npm ci` lulus, `npm test` 924 node:test pass / 0 fail / 0 skipped, Redis 14/14; lint, typecheck dan production build lulus. Angka 408 CareBridge di atas adalah pengujian awal patch. Bukti ini lokal dan bukan deployment produksi.

@@ -3,6 +3,8 @@
 Task audit: [SCRUM-19](https://iqbaldovandraa.atlassian.net/browse/SCRUM-19).
 Nama file historis menyebut SCRUM-48 secara keliru; tiket itu adalah task training, bukan bug ini.
 
+**Pemilik area:** Justin (Safety/Privacy).
+
 ## Teramati
 
 Klien recovery menggunakan GET `/api/sync?backupId=...`; route membaca query parameter dan memvalidasi HEX_256. Identifier dapat dicatat oleh infrastruktur bila request URL direkam.
