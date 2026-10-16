@@ -8,6 +8,7 @@ import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { createClient } from 'redis';
+import { createSessionToken } from '../../services/auth/src/sessionToken.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const production = process.argv.includes('--production');
@@ -105,7 +106,7 @@ try {
   pass('Redis terisolasi: PONG');
   process.env.REDIS_URL = redisUrl;
   const { aiCacheKey, readAiCache, writeAiCache } = await import('../../apps/web/src/lib/api/aiCache.ts');
-  const env = { ...process.env, REDIS_URL: redisUrl, DEEPSEEK_API_KEY: '', OPENROUTER_API_KEY: '', GEMINI_API_KEY: '', DATABASE_URL: '', AI_RESPONSE_CACHE: 'true', NEXT_TELEMETRY_DISABLED: '1', FORUM_THREAD_ALIAS_SECRET: 'redis-integration-thread-secret-0123456789', TRUSTED_PROXY_HOPS: '1', RATE_LIMIT_HASH_SECRET: 'redis-integration-secret-0123456789', NODE_ENV: production ? 'production' : 'development' };
+  const env = { ...process.env, REDIS_URL: redisUrl, DEEPSEEK_API_KEY: '', OPENROUTER_API_KEY: '', GEMINI_API_KEY: '', DATABASE_URL: '', AI_RESPONSE_CACHE: 'true', NEXT_TELEMETRY_DISABLED: '1', FORUM_THREAD_ALIAS_SECRET: 'redis-integration-thread-secret-0123456789', TRUSTED_PROXY_HOPS: '1', RATE_LIMIT_HASH_SECRET: 'redis-integration-secret-0123456789', ADMIN_SESSION_SECRET: 'redis-integration-admin-session-secret-0123456789', NODE_ENV: production ? 'production' : 'development' };
   const next = path.join(root, 'node_modules/next/dist/bin/next');
   const cwd = path.join(temporary, 'apps/web');
   if (production) {
@@ -141,7 +142,16 @@ try {
     assert.equal(page.headers.get('x-nextjs-cache'), 'HIT');
     pass('/resources: 200 dan x-nextjs-cache HIT');
   }
-  const connection = await request(a.base, '/api/redis-test');
+  const adminCookie = production
+    ? `dengarin_admin_session=${createSessionToken('synthetic-test-admin', env.ADMIN_SESSION_SECRET)}`
+    : undefined;
+  if (production) {
+    const anonymousDiagnostic = await request(a.base, '/api/redis-test');
+    assert.equal(anonymousDiagnostic.status, 404, 'anonymous production callers cannot access Redis diagnostics');
+    assert.doesNotMatch(JSON.stringify(await anonymousDiagnostic.json()), /redis/i, 'anonymous response reveals no infrastructure details');
+    pass('Production Redis diagnostic: anonymous request returns an opaque 404');
+  }
+  const connection = await request(a.base, '/api/redis-test', undefined, adminCookie ? { Cookie: adminCookie } : {});
   assert.equal(connection.status, 200);
   assert.equal((await connection.json()).data.connected, true);
   const ttl = await client.ttl('dengarin:healthcheck');

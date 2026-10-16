@@ -33,6 +33,17 @@ export const ARTIFACTS = [
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
+/**
+ * Canonical bytes for reviewed text sources. Git stores these files with LF,
+ * but Windows checkouts may materialize CRLF. Normalize line endings before
+ * hashing/encoding so manifest hashes describe the committed source bytes on
+ * every platform; no content, whitespace, or dataset records are otherwise
+ * changed.
+ */
+export function canonicalizeTextSource(raw) {
+  return Buffer.from(raw.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8');
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const manifest = { schema: 'proto/carebridge/dataset.proto', artifacts: [] };
   for (const a of ARTIFACTS) {
@@ -41,7 +52,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log(`lewati ${a.source} (belum ada)`);
       continue;
     }
-    const raw = readFileSync(sourcePath);
+    const raw = canonicalizeTextSource(readFileSync(sourcePath));
     const packed = encode(a.type, a.read(raw.toString('utf8')));
     writeFileSync(`${REPO_ROOT}${a.artifact}`, packed);
     manifest.artifacts.push({

@@ -4,15 +4,18 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FlaskConical, ShieldOff } from 'lucide-react';
 import { PageContainer, Button, Badge, Chip } from '@/components/ui';
+import { ConsentPending } from '@/components/ConsentPending';
 import { useLanguage, useText } from '@/i18n';
 import { reviewDemoText } from '@/i18n/pages/reviewDemo';
 import { REVIEW_CHECKLIST, REVIEW_DEMO_CASES, REVIEW_DEMO_NOTICES } from '@/lib/reviewDemoData';
+import { useConsentGuard } from '@/lib/useConsentGuard';
 
 /**
  * /review-demo (AMD-12). Read-only and synthetic: no form field, no fetch, no
  * storage. The checklist is component state only and is lost on reload.
  */
 export default function ReviewDemoPage() {
+  const { ready } = useConsentGuard();
   const t = useText(reviewDemoText);
   const { lang } = useLanguage();
   const [caseId, setCaseId] = useState(REVIEW_DEMO_CASES[0].id);
@@ -26,6 +29,8 @@ export default function ReviewDemoPage() {
       else next.add(i);
       return next;
     });
+
+  if (!ready) return <ConsentPending />;
 
   return (
     <PageContainer size="default" className="space-y-8 lg:space-y-10">
