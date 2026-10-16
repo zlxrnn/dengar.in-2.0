@@ -72,13 +72,14 @@ export function EvidencePicker({ entries, selectedIds, loaded, onToggle, canSele
                     checked={checked}
                     disabled={disabled || blocked}
                     onChange={() => onToggle(entry)}
-                    aria-describedby={blocked ? `${inputId}-blocked` : undefined}
-                    className="mt-0.5 w-6 h-6 shrink-0 accent-[#3357EE] focus-visible:outline-none"
+                    aria-labelledby={`${inputId}-label`}
+                    aria-describedby={`${inputId}-preview ${blocked ? `${inputId}-blocked` : ''}`.trim()}
+                    className="mt-0.5 w-6 h-6 shrink-0 accent-[#3357EE] rounded-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3357EE]"
                   />
                   <span className="min-w-0 flex-1 space-y-1">
                     <span className="flex flex-wrap items-center gap-1.5">
                       <SourceChip sourceRef={{ kind: entry.kind, date: entry.date }} />
-                      <span className="text-sm font-bold text-[#151515]">{entry.label}</span>
+                      <span id={`${inputId}-label`} className="text-sm font-bold text-[#151515]">{entry.label}</span>
                       {entry.piiCount > 0 && (
                         <Tag tone="yellow">
                           <ShieldCheck className="w-3 h-3" aria-hidden="true" />
@@ -86,7 +87,7 @@ export function EvidencePicker({ entries, selectedIds, loaded, onToggle, canSele
                         </Tag>
                       )}
                     </span>
-                    <span className={`block text-base leading-relaxed break-words ${MUTED}`}>{entry.preview}</span>
+                    <span id={`${inputId}-preview`} className={`block text-base leading-relaxed break-words ${MUTED}`}>{entry.preview}</span>
                     {blocked && (
                       <span id={`${inputId}-blocked`} className="block text-sm font-bold text-[#B3261E]">
                         {t.blocked(budget.max, budget.maxCount - 1)}

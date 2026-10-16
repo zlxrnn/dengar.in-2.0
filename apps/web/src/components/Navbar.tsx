@@ -244,10 +244,14 @@ export function Navbar() {
   // Ketuk di luar menu seluler (selain tombol Menu di dock) menutupnya.
   useEffect(() => {
     if (!mobileMenuOpen) return;
+    const firstAction = drawerRef.current?.querySelector<HTMLElement>('a, button');
+    firstAction?.focus();
+
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (drawerRef.current?.contains(target) || menuButtonRef.current?.contains(target)) return;
       setMobileMenuOpen(false);
+      menuButtonRef.current?.focus();
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
@@ -255,7 +259,11 @@ export function Navbar() {
 
   const openMobileMenu = (open: boolean) => {
     setMobileMenuOpen(open);
-    if (open) setDockChatOpen(false);
+    if (open) {
+      setDockChatOpen(false);
+    } else {
+      menuButtonRef.current?.focus();
+    }
   };
   const openDockChat = (open: boolean) => {
     setDockChatOpen(open);
@@ -438,6 +446,9 @@ export function Navbar() {
           <div
             id="menu-seluler"
             ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.mobileMenu}
             onKeyDown={handleMenuKeyDown}
             className="lg:hidden bg-[#FFF8EF] border-t-2 border-[#151515] px-4 pt-3 pb-4 max-h-[calc(100dvh-4.25rem-5rem-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain"
           >

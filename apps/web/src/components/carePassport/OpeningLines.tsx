@@ -49,7 +49,7 @@ type ApiEnvelope = { ok: true; data: OpeningLinesResult } | { ok: false; error?:
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
 const LINE_INPUT =
-  'w-full px-3.5 py-3 bg-white border-2 border-[#151515] rounded-[4px] text-base leading-[1.5] font-medium text-[#151515] shadow-[2px_2px_0px_#151515] focus:outline-none focus:shadow-[3px_3px_0px_#3357EE] resize-y min-h-[72px]';
+  'w-full px-3.5 py-3 bg-white border-2 border-[#151515] rounded-[4px] text-base leading-[1.5] font-medium text-[#151515] shadow-[2px_2px_0px_#151515] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE] focus-visible:ring-offset-2 resize-y min-h-[72px]';
 
 function basedOnLabel(ids: string[], labels: Record<string, string>): string {
   const names = [...new Set(ids.map((id) => labels[id.split(':')[0]]).filter(Boolean))];

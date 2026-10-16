@@ -176,16 +176,24 @@ export function StepHeading({
   title,
   lede,
   animate = true,
+  headingRef,
 }: {
   step: string;
   title: string;
   lede: React.ReactNode;
   animate?: boolean;
+  headingRef?: React.Ref<HTMLHeadingElement>;
 }) {
   return (
     <div className={`space-y-3 ${animate ? 'animate-reveal-up' : ''}`}>
       <Tag tone="cobalt">{step}</Tag>
-      <h1 className="text-[1.75rem] sm:text-[2.75rem] font-bold text-[#151515] tracking-[-0.03em] leading-[1.1]">{title}</h1>
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="text-[1.75rem] sm:text-[2.75rem] font-bold text-[#151515] tracking-[-0.03em] leading-[1.1] focus:outline-none"
+      >
+        {title}
+      </h1>
       <p className={`text-base sm:text-lg leading-[1.5] max-w-[38rem] ${MUTED}`}>{lede}</p>
     </div>
   );
