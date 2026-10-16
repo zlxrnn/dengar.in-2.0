@@ -50,6 +50,12 @@ export function ManualNote({ reason, provenance, warnings, onRetry, onBack, busy
   const [questions, setQuestions] = useState('');
   const [reviewed, setReviewed] = useState(false);
 
+  // Approval covers the exact text reviewed, not subsequent edits.
+  const edit = (setter: React.Dispatch<React.SetStateAction<string>>) => (value: string) => {
+    setReviewed(false);
+    setter(value);
+  };
+
   const passport = useMemo<CarePassport>(
     () => ({
       version: 1,
@@ -100,11 +106,11 @@ export function ManualNote({ reason, provenance, warnings, onRetry, onBack, busy
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         <div className="lg:col-span-8 space-y-5 animate-reveal-up [animation-delay:120ms]">
           <SectionCard as="div" className="space-y-5">
-            <Field id="manual-concerns" label={labels.concerns} help={t.fieldHelp.concerns} value={concerns} onChange={setConcerns} rows={3} />
-            <Field id="manual-impact" label={labels.dailyImpact} help={t.fieldHelp.dailyImpact} value={impact} onChange={setImpact} rows={3} />
-            <Field id="manual-duration" label={labels.duration} help={t.fieldHelp.duration} value={duration} onChange={setDuration} rows={1} />
-            <Field id="manual-context" label={labels.relevantContext} help={t.fieldHelp.relevantContext} value={context} onChange={setContext} rows={3} />
-            <Field id="manual-questions" label={labels.questionsForProfessional} help={t.fieldHelp.questionsForProfessional} value={questions} onChange={setQuestions} rows={3} />
+            <Field id="manual-concerns" label={labels.concerns} help={t.fieldHelp.concerns} value={concerns} onChange={edit(setConcerns)} rows={3} />
+            <Field id="manual-impact" label={labels.dailyImpact} help={t.fieldHelp.dailyImpact} value={impact} onChange={edit(setImpact)} rows={3} />
+            <Field id="manual-duration" label={labels.duration} help={t.fieldHelp.duration} value={duration} onChange={edit(setDuration)} rows={1} />
+            <Field id="manual-context" label={labels.relevantContext} help={t.fieldHelp.relevantContext} value={context} onChange={edit(setContext)} rows={3} />
+            <Field id="manual-questions" label={labels.questionsForProfessional} help={t.fieldHelp.questionsForProfessional} value={questions} onChange={edit(setQuestions)} rows={3} />
           </SectionCard>
 
           <button
