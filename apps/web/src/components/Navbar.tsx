@@ -31,6 +31,14 @@ type NavText = typeof commonText.id.nav;
 
 const CHAT_ROUTES = ['/chat', '/ruang-ngobrol'] as const;
 
+/** Menentukan apakah suatu rute sedang aktif (termasuk sub-rute dan /dashboard untuk beranda). */
+function isRouteActive(pathname: string, href: string): boolean {
+  if (href === '/dashboard') {
+    return pathname === '/dashboard' || pathname === '/';
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 // Dua cara ngobrol dengan Dengar.in, dikumpulkan dalam satu tombol: menulis
 // (/chat) atau berbicara (/ruang-ngobrol). Dipakai oleh menu desktop dan dock bawah.
 function ngobrolOptions(t: NavText) {
@@ -55,7 +63,7 @@ function NgobrolOptionList({
     <>
       {ngobrolOptions(t).map((option) => {
         const Icon = option.icon;
-        const current = pathname === option.href;
+        const current = isRouteActive(pathname, option.href);
         return (
           <Link
             key={option.href}
@@ -84,7 +92,7 @@ function NgobrolMenu({ pathname, focusRing, t }: { pathname: string; focusRing: 
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const isActive = CHAT_ROUTES.some((href) => pathname === href);
+  const isActive = CHAT_ROUTES.some((href) => isRouteActive(pathname, href));
 
   useEffect(() => {
     setOpen(false);
@@ -159,7 +167,7 @@ function NgobrolDockButton({
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const isActive = CHAT_ROUTES.some((href) => pathname === href);
+  const isActive = CHAT_ROUTES.some((href) => isRouteActive(pathname, href));
   const focusRing = 'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE] focus-visible:ring-offset-2';
 
   useEffect(() => {
@@ -189,11 +197,13 @@ function NgobrolDockButton({
         aria-expanded={open}
         aria-controls="menu-ngobrol-dock"
         aria-current={isActive && !open ? 'page' : undefined}
-        className={`flex-1 flex flex-col items-center justify-center gap-1 my-1.5 mx-0.5 min-h-[52px] rounded-[4px] border-2 border-[#151515] text-[#151515] shadow-[2px_2px_0px_#151515] transition-[transform,box-shadow,background-color] duration-120 active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_#151515] ${focusRing} ${
-          isActive || open ? 'bg-[#B8F34A]' : 'bg-[#B8F34A]/70'
+        className={`flex-1 flex flex-col items-center justify-center gap-0.5 my-1.5 mx-0.5 min-h-[52px] rounded-[4px] border-2 transition-[transform,box-shadow,background-color,color] duration-120 active:translate-x-[1px] active:translate-y-[1px] ${focusRing} ${
+          isActive || open
+            ? 'bg-[#B8F34A] text-[#151515] border-[#151515] shadow-[2px_2px_0px_#151515] font-bold'
+            : 'bg-transparent text-[#59544D] border-transparent hover:text-[#151515] hover:bg-[#151515]/5'
         }`}
       >
-        <MessagesSquare className="w-6 h-6" aria-hidden="true" />
+        <MessagesSquare className="w-5 h-5 shrink-0" aria-hidden="true" />
         <span className="dock-label text-xs font-bold leading-tight text-center max-w-full">{t.chat}</span>
       </button>
 
@@ -319,7 +329,14 @@ export function Navbar() {
 
   const focusRing = 'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE] focus-visible:ring-offset-2';
   const dockItem =
-    'relative flex flex-col items-center justify-center gap-1 flex-1 min-w-[56px] min-h-[64px] rounded-[4px] transition-colors duration-120 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-[#3357EE]';
+    'relative flex-1 flex flex-col items-center justify-center gap-0.5 my-1.5 mx-0.5 min-h-[52px] min-w-[56px] rounded-[4px] border-2 transition-[transform,box-shadow,background-color,color] duration-120 active:translate-x-[1px] active:translate-y-[1px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE] focus-visible:ring-offset-1';
+
+  const isDirectDockRoute =
+    isRouteActive(pathname, '/dashboard') ||
+    isRouteActive(pathname, '/mission') ||
+    isRouteActive(pathname, '/checkin') ||
+    CHAT_ROUTES.some((href) => isRouteActive(pathname, href));
+  const isMenuButtonActive = mobileMenuOpen || !isDirectDockRoute;
 
   return (
     <>
@@ -369,7 +386,7 @@ export function Navbar() {
             <nav className="hidden lg:flex items-center justify-center gap-1 xl:gap-1.5 flex-1" aria-label={t.main}>
               <NgobrolMenu pathname={pathname} focusRing={focusRing} t={t} />
               {centerLinks.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = isRouteActive(pathname, item.href);
                 return (
                   <Link
                     key={item.href}
@@ -400,9 +417,9 @@ export function Navbar() {
               {/* Bantuan (Desktop) */}
               <Link
                 href="/resources"
-                aria-current={pathname === '/resources' ? 'page' : undefined}
+                aria-current={isRouteActive(pathname, '/resources') ? 'page' : undefined}
                 className={`hidden lg:inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-[4px] text-sm font-bold border-2 border-[#151515] shadow-[2px_2px_0px_#151515] transition-all duration-120 active:translate-x-[1px] active:translate-y-[1px] whitespace-nowrap ${focusRing} ${
-                  pathname === '/resources'
+                  isRouteActive(pathname, '/resources')
                     ? 'bg-[#B8F34A] text-[#151515]'
                     : 'bg-white text-[#151515] hover:bg-[#FFF8EF]'
                 }`}
@@ -468,7 +485,7 @@ export function Navbar() {
               <nav aria-label={t.mobileMenu} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {mobileNavLinks.map((item, index) => {
                   const Icon = item.icon;
-                  const isActive = pathname === item.href;
+                  const isActive = isRouteActive(pathname, item.href);
                   return (
                     <Link
                       key={item.href}
@@ -497,15 +514,22 @@ export function Navbar() {
               <div className="animate-reveal-up [animation-delay:320ms] border-t border-[#D8D3C9] pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {secondaryMobileLinks.map((item) => {
                   const Icon = item.icon;
+                  const isActive = isRouteActive(pathname, item.href);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-2 min-h-[48px] rounded-[4px] text-base font-bold bg-white border-2 border-[#151515] ${focusRing}`}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`flex items-center gap-3 px-4 py-2 min-h-[48px] rounded-[4px] text-base font-bold border-2 border-[#151515] transition-colors duration-200 ${focusRing} ${
+                        isActive
+                          ? 'bg-[#B8F34A] text-[#151515] shadow-[2px_2px_0px_#151515]'
+                          : 'bg-white text-[#151515] hover:bg-[#FFF8EF]'
+                      }`}
                     >
-                      <Icon className={`w-5 h-5 shrink-0 ${item.iconClass}`} aria-hidden="true" />
+                      <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-[#151515]' : item.iconClass}`} aria-hidden="true" />
                       <span className="min-w-0">{item.label}</span>
+                      {isActive && <span className="ml-auto shrink-0 text-xs font-bold">{common.thisPage}</span>}
                     </Link>
                   );
                 })}
@@ -535,16 +559,19 @@ export function Navbar() {
       >
         {bottomDockLinks.slice(0, 2).map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = isRouteActive(pathname, item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`${dockItem} ${isActive ? 'text-[#2B51E6]' : 'text-[#151515] hover:text-[#3357EE]'}`}
+              className={`${dockItem} ${
+                isActive
+                  ? 'bg-[#B8F34A] text-[#151515] border-[#151515] shadow-[2px_2px_0px_#151515] font-bold'
+                  : 'bg-transparent text-[#59544D] border-transparent hover:text-[#151515] hover:bg-[#151515]/5'
+              }`}
             >
-              {isActive && <span className="absolute top-0 left-3 right-3 h-[3px] bg-[#3357EE]" aria-hidden="true" />}
-              <Icon className="w-6 h-6" aria-hidden="true" />
+              <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
               <span className="dock-label text-xs font-bold leading-tight text-center max-w-full">{item.label}</span>
             </Link>
           );
@@ -554,16 +581,19 @@ export function Navbar() {
 
         {bottomDockLinks.slice(2).map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = isRouteActive(pathname, item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`${dockItem} ${isActive ? 'text-[#2B51E6]' : 'text-[#151515] hover:text-[#3357EE]'}`}
+              className={`${dockItem} ${
+                isActive
+                  ? 'bg-[#B8F34A] text-[#151515] border-[#151515] shadow-[2px_2px_0px_#151515] font-bold'
+                  : 'bg-transparent text-[#59544D] border-transparent hover:text-[#151515] hover:bg-[#151515]/5'
+              }`}
             >
-              {isActive && <span className="absolute top-0 left-3 right-3 h-[3px] bg-[#3357EE]" aria-hidden="true" />}
-              <Icon className="w-6 h-6" aria-hidden="true" />
+              <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
               <span className="dock-label text-xs font-bold leading-tight text-center max-w-full">{item.label}</span>
             </Link>
           );
@@ -573,12 +603,16 @@ export function Navbar() {
           ref={menuButtonRef}
           type="button"
           onClick={() => openMobileMenu(!mobileMenuOpen)}
-          className={`${dockItem} ${mobileMenuOpen ? 'text-[#2B51E6]' : 'text-[#151515] hover:text-[#3357EE]'}`}
+          className={`${dockItem} ${
+            isMenuButtonActive
+              ? 'bg-[#B8F34A] text-[#151515] border-[#151515] shadow-[2px_2px_0px_#151515] font-bold'
+              : 'bg-transparent text-[#59544D] border-transparent hover:text-[#151515] hover:bg-[#151515]/5'
+          }`}
           aria-expanded={mobileMenuOpen}
           aria-controls="menu-seluler"
           aria-label={mobileMenuOpen ? t.closeMenu : t.openMenu}
         >
-          {mobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
+          {mobileMenuOpen ? <X className="w-5 h-5 shrink-0" aria-hidden="true" /> : <Menu className="w-5 h-5 shrink-0" aria-hidden="true" />}
           <span className="dock-label text-xs font-bold leading-tight text-center max-w-full">{t.menu}</span>
         </button>
       </nav>
