@@ -3,13 +3,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Check, Copy, ExternalLink, PhoneCall, RotateCcw } from 'lucide-react';
-import type { CarePassport, CarePassportProvenance } from '@dengarin/types';
+import type { CarePassport } from '@dengarin/types';
 import { HELP_DESTINATIONS, type HelpDestination, type HelpDestinationId } from '@dengarin/config';
 import type { OpeningLinesResult } from '@dengarin/orchestrator';
 import { Button, Chip } from '@/components/ui';
 import { LOCALE_TAG, contactText, pickText, useLanguage, type Language } from '@/i18n';
 import { carePassportText } from '@/i18n/pages/carePassport';
 import { localizedHelpDestination } from '@/i18n/pages/helpDestinations';
+import type { OpeningLinesSelection } from '@/lib/carePassportExport';
+export { openingLinesExportText, type OpeningLinesSelection } from '@/lib/carePassportExport';
 import { MUTED, ProvenanceTag, SectionCard, Tag, usePassportText } from './shared';
 
 /**
@@ -25,16 +27,6 @@ import { MUTED, ProvenanceTag, SectionCard, Tag, usePassportText } from './share
  * The sentences themselves are always Indonesian (they are for services in
  * Indonesia); the panel chrome and the checklist follow the UI language.
  */
-
-export interface OpeningLinesSelection {
-  destinationId: HelpDestinationId;
-  destinationLabel: string;
-  /** The sentences as the user last edited them. */
-  lines: string[];
-  provenance: CarePassportProvenance;
-  /** Date the destination checklist was last checked against its sources. */
-  verifiedOn: string;
-}
 
 export interface OpeningLinesProps {
   passport: CarePassport;
@@ -82,20 +74,6 @@ async function copyToClipboard(text: string): Promise<boolean> {
       return false;
     }
   }
-}
-
-/** Plain-text block for the local export. Pure; no browser APIs. */
-export function openingLinesExportText(selection: OpeningLinesSelection, format: 'md' | 'txt', lang: Language = 'id'): string {
-  const t = pickText(carePassportText, lang).opening;
-  const lines = selection.lines.map((l) => l.trim()).filter(Boolean);
-  if (lines.length === 0) return '';
-  const heading = t.exportHeading(selection.destinationLabel);
-  const how = selection.provenance.isAmd
-    ? t.exportHowAmd
-    : selection.provenance.isFallback
-      ? t.exportHowFallback
-      : t.exportHowOther(selection.provenance.providerId);
-  return [format === 'md' ? `## ${heading}` : heading, ...lines.map((l, i) => `${i + 1}. ${l}`), how, ''].join('\n');
 }
 
 function LinesSkeleton() {
