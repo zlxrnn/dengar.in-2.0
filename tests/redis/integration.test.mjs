@@ -9,6 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { createClient } from 'redis';
 import { createSessionToken } from '../../services/auth/src/sessionToken.ts';
+import { getRouteCacheKey } from 'next/dist/server/lib/route-cache-key.js';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const production = process.argv.includes('--production');
@@ -287,7 +288,7 @@ try {
     pass('Dua instance berbagi kuota: A 20 lolos, B 10 lolos + 5 diblokir');
     // An altered cache value proves B actually reads Redis, not its build files.
     const buildId = (await readFile(path.join(cwd, '.next/BUILD_ID'), 'utf8')).trim();
-    const pageKey = `dengarin:next:${buildId}:/resources`;
+    const pageKey = `dengarin:next:${buildId}:${getRouteCacheKey('/resources', { kind: 'APP_PAGE', sourceRoute: '/resources/page' })}`;
     // A leftover entry from a previous build (legacy prefix) must never be served.
     await client.set('dengarin:next:/resources', 'StaleBuildMustNotBeServed');
     const original = await client.get(pageKey);
@@ -310,19 +311,19 @@ try {
   await stop(redis);
   assert.equal((await request(a.base, '/api/health')).status, 200);
   assert.equal((await (await request(a.base, '/api/health')).json()).redis, 'down');
-  assert.equal((await request(a.base, '/api/redis-test')).status, 503);
+  assert.equal((await request(a.base, '/api/redis-test', undefined, adminCookie ? { Cookie: adminCookie } : {})).status, 503);
   assert.equal((await request(a.base, '/api/forum?domain=campus')).status, 200, 'forum tetap terbaca tanpa Redis');
   assert.equal((await request(a.base, '/api/forum', story('Cerita uji saat Redis mati'))).status, 201, 'tulis forum tetap jalan tanpa Redis');
   assert.equal((await request(a.base, '/api/chat', { message })).status, 200);
   pass('Redis mati: health 200, diagnostik 503, chat fallback 200');
   redis = startRedis();
   await waitFor(() => redis.log.includes('Ready to accept connections'), redis);
-  await waitFor(async () => (await request(a.base, '/api/redis-test')).status === 200, a.child);
+  await waitFor(async () => (await request(a.base, '/api/redis-test', undefined, adminCookie ? { Cookie: adminCookie } : {})).status === 200, a.child);
   pass('Redis hidup lagi: aplikasi pulih tanpa restart');
   await stop(a.child);
   const disabled = await startApp(false);
   assert.equal((await (await request(disabled.base, '/api/health')).json()).redis, 'disabled');
-  assert.equal((await request(disabled.base, '/api/redis-test')).status, 503);
+  assert.equal((await request(disabled.base, '/api/redis-test', undefined, adminCookie ? { Cookie: adminCookie } : {})).status, 503);
   assert.equal((await request(disabled.base, '/api/chat', { message })).status, 200);
   assert.equal((await request(disabled.base, '/resources')).status, 200);
   pass('REDIS_URL kosong: health, chat, dan resources tetap 200');

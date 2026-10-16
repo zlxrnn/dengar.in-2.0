@@ -41,6 +41,11 @@ jobs:
       - name: Run unit and integration tests
         run: npm test
 
+      - name: Verify production Redis warm-up and authentication
+        run: |
+          node --test tests/infra/cacheWarmup.test.mjs
+          npm run test:redis -- --production
+
       - name: Lint web app
         run: npm run lint
 
