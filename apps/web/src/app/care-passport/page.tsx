@@ -159,7 +159,7 @@ export default function CarePassportPage() {
       setResultVersion((v) => v + 1);
       if (result.passport) recordMetric('generated', result, segs, rounds);
       if (result.state === 'PROVIDER_UNAVAILABLE') {
-        setStep({ name: 'manual', reason: 'unavailable', result });
+        setStep({ name: 'manual', reason: result.warnings.includes('ai_consent_declined') ? 'declined' : 'unavailable', result });
       } else if (result.state === 'NEEDS_CLARIFICATION' && rounds >= CARE_PASSPORT_MAX_CLARIFICATION_ROUNDS) {
         // Rounds exhausted: show what is known, as-is. Nothing is invented.
         setStep({ name: 'result', result, forceReview: true });
@@ -388,14 +388,15 @@ export default function CarePassportPage() {
           />
         );
       } else {
-        // Defensive: a non-crisis state without a passport is treated as unavailable, never invented.
+        // Preserve the server's consent decision even in this defensive fallback.
+        const declined = result.warnings.includes('ai_consent_declined');
         content = (
           <ManualNote
             key={resultVersion}
-            reason="unavailable"
+            reason={declined ? 'declined' : 'unavailable'}
             provenance={result.provenance}
             warnings={result.warnings}
-            onRetry={aiConsent ? () => runGenerate(segments, kept, clarifications.length) : undefined}
+            onRetry={!declined && aiConsent ? () => runGenerate(segments, kept, clarifications.length) : undefined}
             onBack={restart}
             busy={busy}
             error={error}
