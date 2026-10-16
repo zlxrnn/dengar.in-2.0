@@ -12,7 +12,7 @@ Dokumen ini mencatat temuan bug keamanan berstatus *Critical* / *High* yang dite
 ## 1. [BUG-09 / SCRUM-47] Plaintext Storage of Master Recovery Mnemonic & Unencrypted Health Records in Browser `localStorage`
 
 - **Tingkat Keparahan**: **Tinggi (High)** — Pelanggaran Prinsip Kerahasiaan Rekam Medis / Akses Fisik Tidak Terotorisasi
-- **Jira Key / Epic**: `SCRUM-47` (Epic `SCRUM-8 Privacy`, Penanggung Jawab: Immanuel Justin Elnathan)
+- **Jira Key / Epic**: `SCRUM-47` (Epic `SCRUM-8 Privacy`, Penanggung Jawab: Justin)
 - **Komponen Terdampak**:
   - `apps/web/src/lib/storage.ts`
   - `apps/web/src/app/recovery/page.tsx`
@@ -50,7 +50,7 @@ Jika pengguna mengakses Dengar.in melalui perangkat publik atau perangkat bersam
 ## 2. [BUG-10 / SCRUM-48] Sensitive Backup Identifier (`backupId`) Leaked via HTTP GET Query Parameters in Web Server Access Logs
 
 - **Tingkat Keparahan**: **Tinggi (High)** — Kebocoran Pengidentifikasi Persisten pada Log Server Akses
-- **Jira Key / Epic**: `SCRUM-48` (Epic `SCRUM-8 Privacy`, Penanggung Jawab: Immanuel Justin Elnathan)
+- **Jira Key / Epic**: `SCRUM-48` (Epic `SCRUM-8 Privacy`, Penanggung Jawab: Justin)
 - **Komponen Terdampak**:
   - `apps/web/src/app/recovery/page.tsx` (baris 134)
   - `apps/web/src/app/api/sync/route.ts`

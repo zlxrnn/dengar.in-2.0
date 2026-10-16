@@ -2,7 +2,7 @@
 
 Task: AMD-05. Implementasi: `services/orchestrator/src/carePassportPipeline.ts`. Test: `tests/carebridge/pipeline.test.mjs`.
 
-**Status:** dokumen kebijakan definitif. Penanganan *high distress* (§3) adalah **kebijakan yang disetujui** — mekanisme penguncian state deterministik (`HUMAN_SUPPORT_RECOMMENDED` via `deterministic_high_distress`) sudah berjalan di produksi sejak 15 Okt 2026. Kriteria eskalasi model dan eskalasi berkutipan di §4, frasa darurat bahasa Inggris di §2, serta rule ide pasif di §3 adalah rekomendasi SCRUM-44 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026). Langkah self-help berbasis kartu dan rencana keselamatan statis di §4.3 adalah fitur SCRUM-45 yang **disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026).
+**Status:** dokumen kebijakan definitif. Penanganan *high distress* (§3) adalah **kebijakan yang disetujui** — mekanisme penguncian state deterministik (`HUMAN_SUPPORT_RECOMMENDED` via `deterministic_high_distress`) sudah berjalan di produksi sejak 15 Okt 2026. Kriteria eskalasi model dan eskalasi berkutipan di §4, frasa darurat bahasa Inggris di §2, serta rule ide pasif di §3 adalah rekomendasi SCRUM-44 yang **disetujui Justin, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026). Langkah self-help berbasis kartu dan rencana keselamatan statis di §4.3 adalah fitur SCRUM-45 yang **disetujui Justin, dilaporkan YanIanZ 15 Okt 2026** (diimplementasikan 15 Okt 2026).
 
 ## 1. Urutan wajib
 
@@ -26,7 +26,7 @@ Jika crisis engine memberi `severity: 'high'` tanpa `isCrisis`:
 - Draf tetap boleh dibuat (jika pengguna setuju AI), tetapi state **dikunci** ke `HUMAN_SUPPORT_RECOMMENDED`, dengan peringatan `deterministic_high_distress`.
 - Ini saran informatif untuk berbicara dengan profesional, **bukan** triase atau diagnosis.
 - Alternatif yang ditimbang Safety/QA (menahan pembuatan draf sama sekali untuk kasus `high`) **diputuskan tidak dipilih** — draf tetap dibuat untuk membantu pengguna mengartikulasikan ceritanya kepada profesional.
-- **Ide pasif tanpa rencana (SCRUM-44, disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026):** rule engine `passive-ideation` (ID) dan `en-passive-ideation` (EN) memberi `severity: 'high'` untuk frasa seperti "semua orang lebih baik tanpa aku", "lebih baik aku nggak ada", "I wish I could disappear forever", "my family would be happier without me". Level `high` dipilih karena tidak ada niat, rencana, atau sarana; bentuk eksplisit ("dunia lebih baik tanpaku", "everyone would be better off without me") tetap `crisis`. Lewat jalur §3 ini, kasus semacam itu selalu `HUMAN_SUPPORT_RECOMMENDED` apa pun kata model. Detail: `docs/CRISIS_CLASSIFICATION.md`.
+- **Ide pasif tanpa rencana (SCRUM-44, disetujui Justin, dilaporkan YanIanZ 15 Okt 2026):** rule engine `passive-ideation` (ID) dan `en-passive-ideation` (EN) memberi `severity: 'high'` untuk frasa seperti "semua orang lebih baik tanpa aku", "lebih baik aku nggak ada", "I wish I could disappear forever", "my family would be happier without me". Level `high` dipilih karena tidak ada niat, rencana, atau sarana; bentuk eksplisit ("dunia lebih baik tanpaku", "everyone would be better off without me") tetap `crisis`. Lewat jalur §3 ini, kasus semacam itu selalu `HUMAN_SUPPORT_RECOMMENDED` apa pun kata model. Detail: `docs/CRISIS_CLASSIFICATION.md`.
 
 ## 4. Aturan eskalasi saja
 
@@ -34,7 +34,7 @@ Jika crisis engine memberi `severity: 'high'` tanpa `isCrisis`:
 - Model **tidak pernah** bisa menurunkan penanda deterministik. Field seperti `riskLevel: "none"` dari model diabaikan.
 - Model tidak bisa menandai fakta sebagai `user_confirmed`, tidak bisa menyetujui passport (`reviewStatus` selalu `user_pending`), dan tidak bisa menimpa disclaimer.
 
-### 4.1 Kriteria `humanSupportSuggested` (SCRUM-44; disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026)
+### 4.1 Kriteria `humanSupportSuggested` (SCRUM-44; disetujui Justin, dilaporkan YanIanZ 15 Okt 2026)
 
 Baseline 14 Okt 2026 (`docs/CAREBRIDGE_DATASET.md` §8) menunjukkan kedua model mengeskalasi 10/19 dan 9/19 kasus `moderate` karena kriteria prompt yang terbuka ("sebaiknya segera berbicara dengan profesional"). Prompt (`packages/prompts/src/carePassport.ts`, aturan 10) kini menyebut kriterianya secara eksplisit. `true` hanya bila cerita memuat salah satu:
 
@@ -54,7 +54,7 @@ Baseline 14 Okt 2026 (`docs/CAREBRIDGE_DATASET.md` §8) menunjukkan kedua model 
 - **Trade-off yang disadari:** aturan ini bisa membuang eskalasi model yang benar tetapi dikutip buruk. Jaring pengamannya adalah lapisan deterministik, bukan validator: teks yang dikenal engine selalu terkunci. Yang tersisa terbuka adalah teks yang **tidak** dikenal engine **dan** dieskalasi model tanpa kutipan; celah itu diukur sebagai `missed_esc` pada dataset sintetis dan **harus tetap 0** (`docs/CAREBRIDGE_DATASET.md` §11). Setiap kasus nyata yang terlewat harus ditambahkan ke rule engine (jalur deterministik), bukan ditambal dengan melonggarkan validator.
 - Test: `tests/carebridge/carePassportValidator.test.mjs` (suite "grounded escalation"), `tests/carebridge/pipeline.test.mjs` (suite "escalation only"), `tests/carebridge/carePassportPrompt.test.mjs`.
 
-### 4.3 Langkah self-help berbasis kartu dan rencana keselamatan statis (SCRUM-45; disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026)
+### 4.3 Langkah self-help berbasis kartu dan rencana keselamatan statis (SCRUM-45; disetujui Justin, dilaporkan YanIanZ 15 Okt 2026)
 
 Care Passport kini bisa membawa bagian **"Langkah yang bisa dicoba"**: 0 sampai 3 kartu dari basis pengetahuan self-help (`packages/config/src/selfHelpCards.v1.json`, 30 kartu SCRUM-46, `docs/CAREBRIDGE_KNOWLEDGE_BASE.md`). Aturan yang ditegakkan kode, bukan hanya diminta di prompt:
 

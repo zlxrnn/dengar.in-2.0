@@ -40,7 +40,7 @@ Package `protobufjs` diperlukan oleh `scripts/carebridge/datasetCodec.mjs`, yang
 1. Periksa apakah `protobufjs` sudah ada di `package.json` root atau di `scripts/package.json`.
 2. Jika belum: tambahkan ke `devDependencies` dan jalankan `npm install`.
 3. Jika sudah terdaftar: jalankan `npm install` ulang (mungkin `node_modules` belum up-to-date).
-4. Sesuai `COLLABORATION_RULES.md` §3, perubahan `package.json` root memerlukan approval Release Owner (Iqbal).
+4. Sesuai `COLLABORATION_RULES.md` §3, perubahan `package.json` root memerlukan approval Release Owner (iqbal).
 
 ## Dampak
 
