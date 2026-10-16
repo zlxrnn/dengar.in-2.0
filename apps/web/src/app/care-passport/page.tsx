@@ -90,6 +90,15 @@ export default function CarePassportPage() {
   // Remounts the review when a fresh result arrives so its draft state resets.
   const [resultVersion, setResultVersion] = useState(0);
   const startedAtRef = useRef<number>(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Focus step heading on transition for screen reader and keyboard orientation
+  useEffect(() => {
+    const heading = contentRef.current?.querySelector<HTMLElement>('h1');
+    if (heading) {
+      heading.focus();
+    }
+  }, [step, resultVersion]);
 
   // Local-only reads: the picker's candidates and the age bracket. Done in an
   // effect so SSR never touches storage.
@@ -401,7 +410,9 @@ export default function CarePassportPage() {
 
   return (
     <PageContainer size="default" className="sm:py-16 lg:py-20 pb-24 lg:pb-20">
-      {content}
+      <div ref={contentRef}>
+        {content}
+      </div>
     </PageContainer>
   );
 }

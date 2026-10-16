@@ -82,6 +82,7 @@ export default function CrisisPage() {
           <div className="pt-2 space-y-3">
             <a
               href={toTelHref(primaryContact.phone)}
+              aria-label={t.callAria(primary.name, primaryContact.phone ?? '')}
               className="w-full inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-4 px-6 bg-[#D32F2F] hover:bg-[#B3261E] text-white font-bold text-lg sm:text-xl rounded-md border-2 border-ink shadow-hard transition-[transform,box-shadow,background-color] duration-200 ease-spring hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[2px] active:translate-y-[2px] active:shadow-none min-h-[72px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-cobalt focus-visible:ring-offset-2"
             >
               <PhoneCall className="w-7 h-7" aria-hidden="true" />

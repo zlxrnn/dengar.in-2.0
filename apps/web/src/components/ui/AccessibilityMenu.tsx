@@ -131,6 +131,7 @@ export function AccessibilityMenu({ className = '' }: { className?: string }) {
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-controls="panel-aksesibilitas"
         aria-label={t.buttonAria}
         title={t.buttonAria}

@@ -1,6 +1,6 @@
 # Basis Pengetahuan Self-Help CareBridge (SCRUM-46, dipakai runtime sejak SCRUM-45)
 
-**Status:** **dipakai di runtime** sejak SCRUM-45 (disetujui Immanuel, dilaporkan YanIanZ 15 Okt 2026): kartu dipilih model lewat id dan ditampilkan di Care Passport serta layar bantuan segera (`docs/CAREBRIDGE_SAFETY_POLICY.md` §4.3). Isi kartu dan tabel sumber §3 tetap tunduk pada review Safety Owner (Immanuel) sesuai §6.
+**Status:** **dipakai di runtime** sejak SCRUM-45 (disetujui Justin, dilaporkan YanIanZ 15 Okt 2026): kartu dipilih model lewat id dan ditampilkan di Care Passport serta layar bantuan segera (`docs/CAREBRIDGE_SAFETY_POLICY.md` §4.3). Isi kartu dan tabel sumber §3 tetap tunduk pada review Safety Owner (Justin) sesuai §6.
 **Data:** `packages/config/src/selfHelpCards.v1.json` (30 kartu, 16 topik; dipindah dari `tests/carebridge/dataset/` agar bisa di-import aplikasi dan services). **Accessor bertipe:** `packages/config/src/selfHelpCards.ts` (`SELF_HELP_CARDS`, `SELF_HELP_CARD_IDS`, `SELF_HELP_SELECTABLE_CARD_IDS`, `SAFETY_PLAN_CARD_IDS`, `getSelfHelpCard(id)`, `isSelectableSelfHelpCardId(id)`, `selfHelpCatalogForPrompt(lang)`, `selfHelpAttribution(card)`, `selfHelpLicenseLabel(card, lang)`). **Artefak:** `tests/carebridge/dataset/self_help_cards.v1.pb.zst` + `manifest.json` (`npm run dataset:build`). **Test:** `tests/carebridge/selfHelpCards.test.mjs`.
 **Tanggal riset sumber:** 15 Oktober 2026.
 

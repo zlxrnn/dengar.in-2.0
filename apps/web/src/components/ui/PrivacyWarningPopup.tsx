@@ -23,6 +23,24 @@ export function PrivacyWarningPopup() {
     return () => returnFocusRef.current?.focus?.();
   }, [isVisible]);
 
+  // Kunci scroll halaman latar belakang saat modal aktif dan kembalikan saat ditutup.
+  useEffect(() => {
+    if (!isVisible) return;
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = 'hidden';
+    if (scrollBarWidth > 0) {
+      document.body.style.paddingRight = `${scrollBarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
+  }, [isVisible]);
+
   const handleDismiss = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -83,7 +101,7 @@ export function PrivacyWarningPopup() {
     <>
       {/* Backdrop overlay */}
       <div
-        className={`fixed inset-0 z-[60] bg-[#151515]/60 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[60] bg-[#151515]/60 touch-none transition-opacity duration-300 ${
           isClosing ? 'opacity-0' : 'opacity-100'
         }`}
         onClick={handleDismiss}
@@ -98,14 +116,14 @@ export function PrivacyWarningPopup() {
         aria-modal="true"
         aria-labelledby="privacy-warning-title"
         aria-describedby="privacy-warning-desc"
-        className={`fixed inset-0 z-[61] flex items-center justify-center p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-[opacity,transform] duration-300 ${
+        className={`fixed inset-0 z-[61] flex items-center justify-center p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] overscroll-contain transition-[opacity,transform] duration-300 ${
           isClosing
             ? 'opacity-0 scale-95'
             : 'opacity-100 scale-100'
         }`}
       >
         <div className="bezel w-full max-w-md max-h-[calc(100dvh-1.5rem)] flex">
-        <div className="bezel-core relative w-full min-h-0 overflow-y-auto bg-white">
+        <div className="bezel-core relative w-full min-h-0 overflow-y-auto overscroll-contain bg-white">
           {/* Warning accent bar */}
           <div className="h-2 w-full bg-[#FFD84D]" aria-hidden="true" />
 

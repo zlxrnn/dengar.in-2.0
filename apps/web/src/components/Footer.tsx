@@ -78,25 +78,25 @@ export function Footer() {
             <h2 className="text-lg font-bold text-[#151515]">{t.emergency}</h2>
             <ul className="space-y-0.5">
               <li>
-                <a href="tel:119,8" className={contactLink}>
+                <a href="tel:119,8" className={contactLink} aria-label={`${contacts['healing119-kemenkes'].short}: 119 ext 8`}>
                   <span className={contactName}>{contacts['healing119-kemenkes'].short}</span>
                   <span className={`${contactNumber} text-[#B3261E]`}>119 ext 8</span>
                 </a>
               </li>
               <li>
-                <a href="https://wa.me/628113855472" target="_blank" rel="noopener noreferrer" className={contactLink}>
+                <a href="https://wa.me/628113855472" target="_blank" rel="noopener noreferrer" className={contactLink} aria-label={`WhatsApp ${contacts['lisa-helpline'].short}: 0811-3855-472`}>
                   <span className={contactName}>{contacts['lisa-helpline'].short}</span>
                   <span className={`${contactNumber} text-[#151515]`}>0811-3855-472</span>
                 </a>
               </li>
               <li>
-                <a href="tel:1500771" className={contactLink}>
+                <a href="tel:1500771" className={contactLink} aria-label={`${contacts['tepsa-kemensos'].short}: 1500-771`}>
                   <span className={contactName}>{contacts['tepsa-kemensos'].short}</span>
                   <span className={`${contactNumber} text-[#151515]`}>1500-771</span>
                 </a>
               </li>
               <li>
-                <a href="tel:157" className={contactLink}>
+                <a href="tel:157" className={contactLink} aria-label={`${contacts['satgas-pasti-ojk'].short}: 157`}>
                   <span className={contactName}>{contacts['satgas-pasti-ojk'].short}</span>
                   <span className={`${contactNumber} text-[#151515]`}>157</span>
                 </a>

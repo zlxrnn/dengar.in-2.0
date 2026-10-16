@@ -52,7 +52,7 @@ export function ConsentStep({ onAccept, onDecline }: ConsentStepProps) {
             checked
               ? 'bg-[#E6ECFF] shadow-[2px_2px_0px_#151515]'
               : 'bg-[#FFF8EF] hover:bg-[#F7F0E6] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[2px_2px_0px_#151515] active:translate-x-0 active:translate-y-0 active:shadow-none'
-          } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3357EE]`}
+          } focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE] focus-visible:ring-offset-2`}
         >
           {checked ? (
             <CheckSquare className="w-5 h-5 text-[#3357EE] shrink-0 mt-0.5" aria-hidden="true" />

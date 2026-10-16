@@ -43,7 +43,7 @@ function countNeedsReview(p: CarePassport): number {
 }
 
 const INLINE_INPUT =
-  'w-full px-3 py-2.5 bg-white border-2 border-[#151515] rounded-[4px] text-base leading-[1.5] font-medium text-[#151515] shadow-[2px_2px_0px_#151515] focus:outline-none focus:shadow-[3px_3px_0px_#3357EE]';
+  'w-full px-3 py-2.5 bg-white border-2 border-[#151515] rounded-[4px] text-base leading-[1.5] font-medium text-[#151515] shadow-[2px_2px_0px_#151515] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#3357EE] focus-visible:ring-offset-2';
 
 /**
  * READY_FOR_USER_REVIEW and HUMAN_SUPPORT_RECOMMENDED. The passport is the

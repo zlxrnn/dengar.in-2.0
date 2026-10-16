@@ -1,7 +1,8 @@
 # SCRUM-24 — Release gate, 16 October 2026
 
-Source under test: main `e665d5a`, plus the test-only consent-coverage correction
-in this PR. The application build uses main code unchanged. Synthetic QA data
+Historical verification source: main `e665d5a`, plus the original test-only
+consent-coverage correction. These counts describe that earlier checkout, not
+the current main revision. The application build then used main code unchanged. Synthetic QA data
 only. Vercel remains excluded per the deployment migration decision.
 
 ## Automated verification
@@ -17,10 +18,12 @@ only. Vercel remains excluded per the deployment migration decision.
 | Voice browser QA | 3/3; screenshot/report attachment 10011 on SCRUM-23; 49 automated voice tests included above |
 
 The first aggregate test run found two stale consent-route assertions. The
-public synthetic review and support directory intentionally require no intake
-consent. The correction explicitly lists these routes and checks their
-no-intake boundary; all other pages still require the consent guard. Cause and
-recurrence rule: `bugs/BUG-20261016-01-public-route-consent-test.md`.
+original proposal allowed both synthetic review and static support pages.
+Main PR #11 subsequently chose a guard for the interactive `/review-demo`;
+`/support-options` remains public static help. This branch now retains main's
+full consent tests and guarded demo behavior, superseding the earlier allowlist
+proposal. Cause and recurrence rule:
+`bugs/BUG-20261016-01-public-route-consent-test.md`.
 
 Raw test logs remain local QA artifacts. Browser summaries record UTC timestamps
 around 19:40 on 15 October (02:40 WIB on 16 October). Mobile chat success uses
@@ -118,3 +121,21 @@ Tracked environment examples were inspected: `.env.example` has 28 assignments,
 with only the timeout nonempty; `deploy/vps/secrets.env.example` has 15, with only
 model/JSON-mode/timeout defaults nonempty. Credential fields are empty. Runtime
 secret files and raw evaluation reports are excluded from this PR.
+
+## Integration follow-up, 16 October 2026
+
+Merge origin/main `8cb7669` into PR #8. Preserve all tests and the review-demo
+consent guard delivered by PR #11. Remaining release changes are the bundled
+font/provenance, outer deployment budget, and historical release evidence.
+Current verification results are recorded in the PR after the final merged
+checkout is tested; earlier browser, live-provider, dependency-license counts
+and VPS rollout observations above remain historical evidence. No new hosted
+rollout or live model evaluation is implied by resolving the merge conflict.
+
+Final local checks after conflict resolution: clean `npm ci` PASS; `npm test`
+919 node:test PASS / 0 fail / 0 skipped, Redis 14/14; lint, typecheck and
+production build PASS. Chromium 141.0.7390.37 production smoke on `/crisis` at
+390×844: HTTP 200, no horizontal overflow, local display font loaded at weight
+700, same-origin WOFF2 HTTP 200 with the pinned SHA-256, public OFL license HTTP
+200. Both license copies are byte-identical to the previously bundled source.
+These are local results; no production rollout was performed in this follow-up.
