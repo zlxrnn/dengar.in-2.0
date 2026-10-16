@@ -10,7 +10,7 @@ Draf model tulisan tangan. Membuktikan validator, bukan model.
 
 | Item | Nilai |
 |---|---|
-| Tanggal (UTC) | 2026-10-14T16:12:07.932Z |
+| Tanggal (UTC) | 2026-10-16T14:09:04.628Z |
 | Model | `mock-handwritten-drafts` |
 | Perintah | `node --experimental-strip-types scripts/eval-carebridge.mjs --mode=mock` |
 | Node | v25.9.0 |
@@ -22,7 +22,7 @@ Draf model tulisan tangan. Membuktikan validator, bukan model.
 | Latensi | tidak dilaporkan |
 | Klaim dibuang validator (total) | 38 |
 | Klaim tanpa dasar lolos (audit otomatis) | **0** |
-| Kecocokan state kasus emas | 4/5 |
+| Kecocokan state kasus emas | 5/5 |
 | Case C: provider dipanggil 0 kali | ya |
 | Case D: PII tidak sampai provider/keluaran | ya |
 | Case E: outage → fallback jujur | ya |

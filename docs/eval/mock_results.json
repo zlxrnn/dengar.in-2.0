@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "mode": "mock",
   "status": "completed",
-  "date": "2026-10-14T16:12:07.932Z",
+  "date": "2026-10-16T14:09:04.628Z",
   "command": "node --experimental-strip-types scripts/eval-carebridge.mjs --mode=mock",
   "node": "v25.9.0",
   "iterations": 1,
@@ -36,7 +36,7 @@
       "durationStatusMismatch": 0
     },
     "goldenStateMatch": {
-      "matched": 4,
+      "matched": 5,
       "of": 5
     }
   },
@@ -71,14 +71,15 @@
       "id": "B",
       "kind": "golden",
       "iteration": 1,
-      "state": "READY_FOR_USER_REVIEW",
+      "state": "NEEDS_CLARIFICATION",
       "providerCalls": 1,
       "droppedClaims": 2,
       "warnings": [
         "duration: kutipan sumber tidak ditemukan pada input",
-        "unknowns: butir tidak aman dibuang"
+        "unknowns: butir tidak aman dibuang",
+        "low_completeness_clarification"
       ],
-      "stateMatch": false,
+      "stateMatch": true,
       "completed": true,
       "audit": {
         "ungroundedQuotes": 0,

@@ -2,7 +2,7 @@
 
 Task: AMD-16 · Fixture: `tests/carebridge/fixtures.mjs` (hanya kasus sintetis A–E) · Rubrik: [CAREBRIDGE_EVAL_RUBRIC.md](CAREBRIDGE_EVAL_RUBRIC.md) · Batas video lablab: **≤ 5 menit, < 300 MB** (target internal 4 menit agar ada ruang potong).
 
-**Status 14 Oktober 2026:** halaman `/care-passport`, route `/api/care-passport`, pratinjau redaksi, review, dan ekspor **ada di working tree tetapi belum di-commit dan belum punya test**; `/support-options` dan `/review-demo` belum ada; endpoint AMD **belum dikonfigurasi** (AMD-02). Bagian "Yang bisa direkam hari ini" (§5) menjelaskan apa yang sudah bisa diperlihatkan tanpa AMD. Jangan merekam versi final sebelum trace AMD nyata ada.
+**Status 16 Oktober 2026:** halaman `/care-passport`, route `/api/care-passport`, pratinjau redaksi, review, ekspor, `/support-options`, dan `/review-demo` sudah diimplementasikan dan memiliki cakupan test (AMD-12 selesai). Endpoint AMD dapat diuji melalui probe. Bagian "Yang bisa direkam hari ini" (§5) menjelaskan apa yang sudah bisa diperlihatkan tanpa AMD. Jangan merekam versi final sebelum trace AMD nyata ada.
 
 ## 1. Aturan rekaman
 

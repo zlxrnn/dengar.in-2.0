@@ -12,6 +12,7 @@ import { validateCarePassportDraft } from '../../services/validator/src/carePass
 // Domain 2: Local Storage
 import {
   clearAnonymousSession,
+  purgeRecoveryMnemonic,
   DENGARIN_STORAGE_PREFIX,
   initAnonymousSession,
   getAnonymousSession
@@ -130,6 +131,22 @@ describe('Automated Security & Abuse Test Suite (Track 2 Acceptance)', () => {
       const parsed = JSON.parse(raw);
       // Verified: mnemonic is stored plaintext in localStorage
       assert.equal(parsed.recoveryMnemonic, session.recoveryMnemonic);
+    });
+
+    it('purges recovery mnemonic from storage while preserving session metadata (BUG-09 remediation)', () => {
+      memory.clear();
+      const session = initAnonymousSession();
+      assert.ok(session.recoveryMnemonic);
+
+      const ok = purgeRecoveryMnemonic();
+      assert.equal(ok, true);
+
+      const raw = memory.getItem('dengarin_anonymous_session');
+      assert.ok(raw);
+      const parsed = JSON.parse(raw);
+      assert.equal(parsed.recoveryMnemonic, undefined, 'Mnemonic must be completely purged from storage');
+      assert.equal(parsed.userId, session.userId, 'User ID must be preserved');
+      assert.equal(parsed.anonymousAlias, session.anonymousAlias, 'Alias must be preserved');
     });
   });
 

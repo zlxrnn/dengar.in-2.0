@@ -1,6 +1,14 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 export const HEX_256 = /^[0-9a-f]{64}$/;
+export const BACKUP_ID_HEADER = 'x-dengarin-backup-id';
+
+export function extractBackupId(
+  headers: { get: (name: string) => string | null },
+  searchParams?: { get: (name: string) => string | null }
+): string | null {
+  return headers.get(BACKUP_ID_HEADER) || searchParams?.get('backupId') || null;
+}
 
 export function validBackupProof(
   key: string, backupId: string, version: number, blob: string, proof: string

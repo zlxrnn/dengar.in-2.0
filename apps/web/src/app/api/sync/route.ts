@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { syncRepository } from '@/lib/api/repositories';
 import { jsonError, jsonOk } from '@/lib/api/response';
-import { HEX_256, validBackupProof } from '@/lib/api/syncAuth';
+import { HEX_256, extractBackupId, validBackupProof } from '@/lib/api/syncAuth';
 import { isRateLimited } from '@/lib/api/rateLimit';
 import { readJsonLimited } from '@/lib/api/requestLimits';
 
@@ -11,14 +11,14 @@ import { readJsonLimited } from '@/lib/api/requestLimits';
  * never sees the mnemonic or plaintext session data.
  *
  * Two read paths:
- * - `?backupId=` (v2): versioned backups whose writes are authorised by a
+ * - `x-dengarin-backup-id` header or `?backupId=` (v2): versioned backups whose writes are authorised by a
  *   `writeProof` (see lib/api/syncAuth.ts).
  * - `?mnemonicHash=` (legacy): pre-v2 backups keyed by a hash of the mnemonic,
  *   kept readable so older backups can still be restored.
  */
 export async function GET(request: NextRequest) {
   if (await isRateLimited('sync-read', request)) return jsonError('Sedang cukup ramai. Tarik napas dulu, lalu coba lagi sebentar lagi, ya.', 429);
-  const backupId = request.nextUrl.searchParams.get('backupId');
+  const backupId = extractBackupId(request.headers, request.nextUrl.searchParams);
   if (backupId) {
     if (!HEX_256.test(backupId)) return jsonError('backupId tidak valid.');
     const record = await syncRepository.getSecure(backupId);

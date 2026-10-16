@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { cp, mkdtemp, readFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -9,6 +9,12 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { createClient } from 'redis';
 import { createSessionToken } from '../../services/auth/src/sessionToken.ts';
+
+const probe = spawnSync('redis-server', ['--version'], { encoding: 'utf8' });
+if (probe.error) {
+  console.log('tests/redis: redis-server tidak ditemukan di PATH — melewati pengujian integrasi Redis.');
+  process.exit(0);
+}
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const production = process.argv.includes('--production');

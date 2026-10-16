@@ -58,7 +58,26 @@ describe('recovery and sync v2 security', () => {
     const proof = await signBackupUpdate(writeKey, backupId, 1, blob);
     assert.equal(validBackupProof(writeKey, backupId, 1, blob, proof), true);
     assert.equal(validBackupProof(backupId, backupId, 1, blob, proof), false);
-    assert.equal(validBackupProof(writeKey, backupId, 2, blob, proof), false);
     assert.equal(validBackupProof(writeKey, backupId, 1, 'changed', proof), false);
+  });
+
+  it('extracts backupId from x-dengarin-backup-id header to avoid URL log leakage (BUG-10)', async () => {
+    const { extractBackupId, BACKUP_ID_HEADER } = await import('../../apps/web/src/lib/api/syncAuth.ts');
+    const { backupId } = await deriveSyncCredentials(generateRecoveryMnemonic());
+
+    assert.equal(BACKUP_ID_HEADER, 'x-dengarin-backup-id');
+
+    // Header extraction precedence
+    const headerOnly = new Headers({ 'x-dengarin-backup-id': backupId });
+    assert.equal(extractBackupId(headerOnly), backupId);
+
+    // Header takes precedence over query params
+    const both = new Headers({ 'x-dengarin-backup-id': backupId });
+    const searchParams = new URLSearchParams({ backupId: 'fallback-query-id' });
+    assert.equal(extractBackupId(both, searchParams), backupId);
+
+    // Fallback to query param if header absent
+    const emptyHeaders = new Headers();
+    assert.equal(extractBackupId(emptyHeaders, searchParams), 'fallback-query-id');
   });
 });

@@ -44,7 +44,7 @@ export interface AnonymousUserSession {
   userId: string;          // Cryptographic UUID v4
   anonymousAlias?: string; // Generated empathetic alias, e.g. "Bunga Tenang #2481" (Zero PII)
   createdAt: string;       // ISO timestamp
-  recoveryMnemonic: string; // 12-word seed phrase
+  recoveryMnemonic?: string; // 12-word seed phrase (optional if purged from local storage)
   ageBracket?: AgeBracket;
   occupation?: string;     // Context/role (e.g. Pelajar, Mahasiswa, Pekerja, Wirausaha, etc.)
   topicPillar?: TopicPillarId; // PRD 2.0 Primary Topic Pillar

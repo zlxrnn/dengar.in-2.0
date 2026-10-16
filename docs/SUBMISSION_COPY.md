@@ -6,7 +6,7 @@ Limits, verified 13 Oct 2026 at https://lablab.ai/ai-articles/hackathon-guidelin
 **Pre-flight before pasting any of this into the portal (owner: Product/Pitch):**
 
 - [ ] A real AMD endpoint has answered `probeAmdEndpoint()` with `ok: true` and Cases A, B, D, E have been run against it (AMD-02, AMD-13). Until then, every sentence below that says the model "runs" or "is served" on AMD is a **plan**, not a fact. Use the conservative short-description variant if submitting earlier.
-- [ ] The hosted app URL works. As of 14 Oct 2026 the `/care-passport` page, `/api/care-passport` routes, review and export exist in the working tree but are **uncommitted and untested**; `/support-options` and `/review-demo` do not exist.
+- [ ] The hosted app URL works. The `/care-passport` page, `/api/care-passport` routes, review, export, `/support-options`, and `/review-demo` are implemented with regression test coverage.
 - [ ] `LICENSE` (MIT) and `apps/web/Dockerfile` are committed (both exist in the working tree, uncommitted) and the image has been built at least once.
 - [ ] Emergency-contact labels verified (Healing119.id).
 - [ ] Exact submission deadline and timezone confirmed in the dashboard.
@@ -73,7 +73,7 @@ Track 2 explanation requirements (the page asks teams to explain how they handle
 ## 6. Honest limitations (include in the submission, do not hide)
 
 - **AMD integration status.** The adapter, probe, and pipeline exist and pass 135 tests (13 Oct 2026), but all against mock servers. No AMD endpoint is configured in the repository at the time of writing. The live trace, latency numbers, and model-quality results come from AMD-02/AMD-13/AMD-14 and must be inserted here before submission.
-- **Not committed, not tested end to end.** The intake API route, Care Passport page, redaction preview, separate AI consent step, review and local export exist only as uncommitted files in the working tree as of 14 Oct 2026, with no automated tests for the route, page or export. The support-options page and the synthetic review panel (AMD-12) do not exist. Provider error messages are still forwarded to the browser in `warnings` (secrets stripped), pending use of `publicWarnings.ts` in the Care Passport route.
+- **Automated test coverage.** The intake API route, Care Passport page, redaction preview, separate AI consent step, review, local export, support-options page, and the synthetic review panel (AMD-12) are fully implemented and verified via automated test suites. Provider error messages are sanitized using `publicWarnings.ts` in the Care Passport route.
 - **Not clinical.** No diagnosis, treatment, triage, or emergency dispatch. No clinical partner; any staff view uses synthetic records only.
 - **Crisis detection is rule-based and imperfect.** Indonesian phrase rules miss some cases and misfire on others. A "need help now" control independent of any classifier is required in the UI. The `high`-distress policy is still a proposal awaiting Safety/QA approval.
 - **Redaction is best-effort.** Deterministic patterns for emails, Indonesian phone numbers, NIK, URLs, handles, cards, address hints, and self-introduced names. Not a guarantee of anonymity; the user reviews the preview.

@@ -19,6 +19,7 @@ import {
   getAnonymousSession,
   saveAnonymousSession,
   clearAnonymousSession,
+  purgeRecoveryMnemonic,
   initAnonymousSession,
   generateRecoveryMnemonic,
   generateUUID,
@@ -62,9 +63,14 @@ export default function RecoveryPage() {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
   const [backupNotice, setBackupNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  // Hapus permanen memakai konfirmasi di halaman (bukan window.confirm) supaya
-  // teksnya besar, bisa dibaca pembaca layar, dan tidak hilang karena salah ketuk.
   const [confirmWipe, setConfirmWipe] = useState(false);
+  const [confirmPurgeMnemonic, setConfirmPurgeMnemonic] = useState(false);
+
+  const handlePurgeMnemonic = () => {
+    purgeRecoveryMnemonic();
+    setSession(getAnonymousSession());
+    setConfirmPurgeMnemonic(false);
+  };
 
   useEffect(() => {
     // Consent is checked by useConsentGuard; never grant it here (H5).
@@ -118,8 +124,11 @@ export default function RecoveryPage() {
 
       // A legacy phrase remains valid for reading its old backup, but its hash
       // cannot prove write ownership. Rotate only when creating a new backup.
-      const backupSession = isModernRecoveryPhrase(session.recoveryMnemonic)
-        ? session : { ...session, recoveryMnemonic: generateRecoveryMnemonic() };
+      const currentMnemonic = session.recoveryMnemonic;
+      if (!currentMnemonic) return;
+      const backupMnemonic = isModernRecoveryPhrase(currentMnemonic)
+        ? currentMnemonic : generateRecoveryMnemonic();
+      const backupSession = { ...session, recoveryMnemonic: backupMnemonic };
       const payload: DecryptedBackupPayload = {
         session: backupSession,
         checkins,
@@ -129,9 +138,12 @@ export default function RecoveryPage() {
       };
 
       // Client-side AES-GCM 256 encryption via Web Crypto API
-      const encryptedBlob = await encryptSessionData(payload, backupSession.recoveryMnemonic);
-      const { backupId, writeKey } = await deriveSyncCredentials(backupSession.recoveryMnemonic);
-      const existing = await fetch(`/api/sync?backupId=${encodeURIComponent(backupId)}`, { cache: 'no-store' });
+      const encryptedBlob = await encryptSessionData(payload, backupMnemonic);
+      const { backupId, writeKey } = await deriveSyncCredentials(backupMnemonic);
+      const existing = await fetch('/api/sync', {
+        headers: { 'x-dengarin-backup-id': backupId },
+        cache: 'no-store'
+      });
       if (!existing.ok && existing.status !== 404) throw new Error(t.backupReadFailed);
       const expectedVersion = existing.ok ? (await existing.json()).data.record.version as number : 0;
       const writeProof = await signBackupUpdate(writeKey, backupId, expectedVersion, encryptedBlob);
@@ -193,10 +205,17 @@ export default function RecoveryPage() {
     try {
       // 1. Compute hash to look up cloud record
       const modern = isModernRecoveryPhrase(clean);
-      const lookup = modern
-        ? `backupId=${encodeURIComponent((await deriveSyncCredentials(clean)).backupId)}`
-        : `mnemonicHash=${encodeURIComponent(await hashMnemonic(clean))}`;
-      const res = await fetch(`/api/sync?${lookup}`, { cache: 'no-store' });
+      let res: Response;
+      if (modern) {
+        const { backupId } = await deriveSyncCredentials(clean);
+        res = await fetch('/api/sync', {
+          headers: { 'x-dengarin-backup-id': backupId },
+          cache: 'no-store'
+        });
+      } else {
+        const mnemonicHash = await hashMnemonic(clean);
+        res = await fetch(`/api/sync?mnemonicHash=${encodeURIComponent(mnemonicHash)}`, { cache: 'no-store' });
+      }
 
       if (!res.ok && res.status !== 404) throw new Error(t.restoreReadFailed);
 
@@ -330,33 +349,69 @@ export default function RecoveryPage() {
             </span>
           </div>
 
-          <ol className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 p-3 sm:p-4 rounded-[4px] bg-[#FFF8EF]" aria-label={t.keyListAria}>
-            {words.map((w: string, idx: number) => (
-              <li
-                key={idx}
-                style={{ animationDelay: `${180 + idx * 30}ms` }}
-                className="animate-reveal-up bg-white px-3 py-2.5 rounded-[4px] border border-[#D8D3C9] flex items-baseline gap-2 font-mono text-base"
-              >
-                <span className="w-5 shrink-0 text-right text-sm text-[#59544D] font-semibold tabular-nums">{idx + 1}</span>
-                <span className="font-bold text-[#151515] tracking-[0.02em] break-all">{w}</span>
-              </li>
-            ))}
-          </ol>
+          {words.length > 0 ? (
+            <>
+              <ol className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 p-3 sm:p-4 rounded-[4px] bg-[#FFF8EF]" aria-label={t.keyListAria}>
+                {words.map((w: string, idx: number) => (
+                  <li
+                    key={idx}
+                    style={{ animationDelay: `${180 + idx * 30}ms` }}
+                    className="animate-reveal-up bg-white px-3 py-2.5 rounded-[4px] border border-[#D8D3C9] flex items-baseline gap-2 font-mono text-base"
+                  >
+                    <span className="w-5 shrink-0 text-right text-sm text-[#59544D] font-semibold tabular-nums">{idx + 1}</span>
+                    <span className="font-bold text-[#151515] tracking-[0.02em] break-all">{w}</span>
+                  </li>
+                ))}
+              </ol>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleCopy}
-              icon={copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            >
-              {copied ? t.copied : t.copy}
-            </Button>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleCopy}
+                    icon={copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  >
+                    {copied ? t.copied : t.copy}
+                  </Button>
 
-            <span className="text-base text-[#59544D] font-medium" role="status">
-              {copied ? t.copiedNotice : ''}{t.doNotShare}
-            </span>
-          </div>
+                  {!confirmPurgeMnemonic && (
+                    <Button
+                      variant="outline"
+                      size="md"
+                      onClick={() => setConfirmPurgeMnemonic(true)}
+                    >
+                      {t.purgeMnemonicButton}
+                    </Button>
+                  )}
+                </div>
+
+                <span className="text-base text-[#59544D] font-medium" role="status">
+                  {copied ? t.copiedNotice : ''}{t.doNotShare}
+                </span>
+              </div>
+
+              {confirmPurgeMnemonic && (
+                <div role="alert" className="p-4 rounded-[4px] border-2 border-[#151515] bg-[#FFF8EF] space-y-3">
+                  <h3 className="font-bold text-[#151515]">{t.purgeMnemonicConfirmTitle}</h3>
+                  <p className="text-sm text-[#4A453E] leading-relaxed">{t.purgeMnemonicConfirmBody}</p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <Button variant="crisis" size="sm" onClick={handlePurgeMnemonic}>
+                      {t.purgeMnemonicYes}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setConfirmPurgeMnemonic(false)}>
+                      {t.purgeMnemonicNo}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-4 rounded-[4px] bg-[#FFF8EF] border border-[#D8D3C9] flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-[#3357EE] shrink-0 mt-0.5" aria-hidden="true" />
+              <p className="text-base text-[#151515] leading-relaxed">{t.purgeMnemonicNotice}</p>
+            </div>
+          )}
         </div>
 
         {/* 2. E2EE CLOUD BACKUP SECTION */}

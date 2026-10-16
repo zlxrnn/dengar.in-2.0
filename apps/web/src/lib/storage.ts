@@ -364,3 +364,23 @@ export function clearAnonymousSession(): void {
     console.error('Failed to wipe anonymous data:', err);
   }
 }
+
+/**
+ * Remove the recovery mnemonic from local storage to mitigate physical exposure
+ * on shared or public devices, while preserving user ID, alias, consent, and session.
+ */
+export function purgeRecoveryMnemonic(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const session = getAnonymousSession();
+    if (session && session.recoveryMnemonic) {
+      delete session.recoveryMnemonic;
+      saveAnonymousSession(session);
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Failed to purge recovery mnemonic:', err);
+    return false;
+  }
+}

@@ -47,6 +47,12 @@ const id = {
   wipeConfirmBody: 'Ini tidak bisa dibatalkan. Setelah dihapus, kamu pindah ke halaman depan.',
   wipeYes: 'Ya, hapus semua',
   wipeNo: 'Batal, jangan hapus',
+  purgeMnemonicButton: 'Hapus frasa dari perangkat ini',
+  purgeMnemonicConfirmTitle: 'Hapus frasa pemulihan dari peramban ini?',
+  purgeMnemonicConfirmBody: 'Pastikan kamu sudah mencatat dan menyimpan 12 frasa di atas. Setelah dihapus, frasa tidak dapat dilihat kembali di perangkat ini demi mencegah akses pihak lain di perangkat bersama. Sesi dan jurnalmu tetap aman.',
+  purgeMnemonicYes: 'Ya, hapus frasa sekarang',
+  purgeMnemonicNo: 'Batal',
+  purgeMnemonicNotice: 'Frasa pemulihan telah dihapus dari peramban ini demi privasi. Kamu dapat memulihkan sesi kapan saja dengan memasukkan frasa yang telah kamu catat di bagian bawah.',
 };
 
 const en: typeof id = {
@@ -96,6 +102,12 @@ const en: typeof id = {
   wipeConfirmBody: 'This cannot be undone. After deleting, you go to the front page.',
   wipeYes: 'Yes, delete everything',
   wipeNo: 'Cancel, keep my data',
+  purgeMnemonicButton: 'Remove phrase from this device',
+  purgeMnemonicConfirmTitle: 'Remove recovery phrase from this browser?',
+  purgeMnemonicConfirmBody: 'Make sure you have copied and saved the 12 phrase parts above. Once removed, the phrase cannot be viewed on this device again to prevent access by others on shared devices. Your active session and journals remain safe.',
+  purgeMnemonicYes: 'Yes, remove phrase now',
+  purgeMnemonicNo: 'Cancel',
+  purgeMnemonicNotice: 'The recovery phrase has been removed from this browser for privacy. You can restore your session anytime by entering your saved phrase in the restore section below.',
 };
 
 export const recoveryText: TextBundle<typeof id> = { id, en };

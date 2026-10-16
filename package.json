@@ -2,7 +2,7 @@
   "name": "dengarin-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "Dengar.in \u2014 Pendamping Mental Well-being Anonim Berbasis AI",
+  "description": "Dengar.in — Pendamping Mental Well-being Anonim Berbasis AI",
   "workspaces": [
     "apps/*",
     "packages/*",
