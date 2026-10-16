@@ -45,9 +45,11 @@ export async function registerNodeInstrumentation(): Promise<void> {
     const { registerInitialCache } = await import(/* webpackIgnore: true */ instrumentationSpecifier);
 
     let CacheHandler: unknown;
+    let handlerUrl: string | undefined;
     for (const url of candidates) {
       try {
         CacheHandler = (await import(/* webpackIgnore: true */ url)).default;
+        handlerUrl = url;
         break;
       } catch {
         // Coba kandidat berikutnya.
@@ -59,10 +61,9 @@ export async function registerNodeInstrumentation(): Promise<void> {
       return;
     }
 
-    await registerInitialCache(CacheHandler, {
-      // Jangan menimpa entri yang sudah ditulis instance lain saat runtime.
-      setOnlyIfNotExists: true
-    });
+    const warmupUrl = handlerUrl!.replace(/cache-handler\.mjs$/, 'cache-warmup.mjs');
+    const { registerRouteAwareInitialCache } = await import(/* webpackIgnore: true */ warmupUrl);
+    await registerRouteAwareInitialCache(CacheHandler, registerInitialCache, new URL('.', handlerUrl));
     console.info('[Instrumentation] cache awal terdaftar ke Redis.');
   } catch (error) {
     // Optimasi warm-up gagal tidak boleh menggagalkan start server.
