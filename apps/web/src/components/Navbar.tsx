@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { AccessibilityMenu, QuickExitButton } from './ui';
 import { LanguageQuickButton, LanguageSwitch, commonText, useText } from '@/i18n';
+import { PRIVACY_WARNING_OPENING_EVENT } from '@/lib/privacyWarningEvents';
 
 type NavText = typeof commonText.id.nav;
 
@@ -280,11 +281,14 @@ export function Navbar() {
     };
     const desktop = window.matchMedia('(min-width: 1024px)');
     const onDesktop = () => { if (desktop.matches) setMobileMenuOpen(false); };
+    const onPrivacyWarning = () => setMobileMenuOpen(false);
+    window.addEventListener(PRIVACY_WARNING_OPENING_EVENT, onPrivacyWarning);
     desktop.addEventListener('change', onDesktop);
     document.addEventListener('pointerdown', onPointerDown);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
       desktop.removeEventListener('change', onDesktop);
+      window.removeEventListener(PRIVACY_WARNING_OPENING_EVENT, onPrivacyWarning);
       background.forEach(({ element, inert }) => { element.inert = inert; });
       menuButtonRef.current?.focus();
     };

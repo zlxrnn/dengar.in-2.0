@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, ShieldAlert, X, CheckCircle2, Heart } from 'lucide-react';
 import { useText } from '@/i18n/store';
 import { uiText } from '@/i18n/pages/ui';
+import { PRIVACY_WARNING_OPENING_EVENT } from '@/lib/privacyWarningEvents';
 
 const STORAGE_KEY = 'dengarin_privacy_warning_dismissed';
 
@@ -89,7 +90,12 @@ export function PrivacyWarningPopup() {
       }
       if (!dismissed) {
         // Small delay so the page loads first, then popup appears with animation
-        const timer = setTimeout(() => setIsVisible(true), 600);
+        const timer = setTimeout(() => {
+          // Close the navigation modal in the same React update. Its inert
+          // cleanup runs before this warning's focus effect mounts.
+          window.dispatchEvent(new Event(PRIVACY_WARNING_OPENING_EVENT));
+          setIsVisible(true);
+        }, 600);
         return () => clearTimeout(timer);
       }
     }

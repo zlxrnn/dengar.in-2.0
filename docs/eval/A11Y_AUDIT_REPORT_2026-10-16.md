@@ -39,3 +39,23 @@ Playwright diperlukan sebagai alat QA; jika diinstal di luar repo, set `PLAYWRIG
 ## Yang belum dibuktikan
 
 Safari/Firefox, perangkat fisik, pembaca layar, forced-colors, ukuran target semua komponen, text scaling 140%, dan kepatuhan WCAG menyeluruh belum diverifikasi oleh regression test ini. Laporan tidak mengklaim semuanya lulus. Review pemilik Navbar dan Release Owner tetap diperlukan sebelum merge.
+
+## Regresi popup privasi dan menu — audit lanjutan f6b0270
+
+Ditemukan race pada kunjungan pertama: buka Menu sebelum timer popup 600 ms.
+Drawer membuat `main` inert; popup yang berada di dalamnya ikut inert dan
+konfirmasi tidak bisa menerima fokus. Empat kombinasi 390/768 px × ID/EN gagal
+sebelum patch. Popup kini mengumumkan pembukaannya agar drawer ditutup dalam
+update React yang sama; cleanup inert berjalan sebelum efek fokus popup.
+
+`tests/browser/firstVisitModal.test.mjs` mengulang race secara deterministik,
+tanpa menandai popup sudah ditutup. Delapan kombinasi 390/768 px × ID/EN ×
+100/140% lulus: popup tidak inert, drawer ditutup, fokus masuk dan tetap di
+popup, Escape tidak menjalankan quick exit, fokus kembali ke Menu, serta
+scroll dan inert dipulihkan. Bersama empat tes drawer terdahulu: 12/12 lulus
+pada Chromium 141.0.7390.37. Lint dan typecheck juga lulus.
+
+Pembesaran teks di sini hanya membuktikan interaksi modal pada 140%; tidak
+membuktikan seluruh halaman bebas clipping atau seluruh target memenuhi
+ukuran minimum. Batasan browser/perangkat dan screen reader di atas tetap
+berlaku. Jalankan kedua file dengan `QA_BASE_URL` menunjuk aplikasi lokal.
