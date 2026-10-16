@@ -47,33 +47,40 @@
 /docs/CAREBRIDGE_STRUCTURE_MERMAID.md          @YanIanZ
 /docs/CB-035_GOOGLE_DEEPMIND_GEMMA_AMD.md      @YanIanZ
 
-# --- Bryan: AMD inference & orchestrator providers ---
-# TODO /services/orchestrator/src/providers/   @<bryan>
-# TODO /services/orchestrator/src/orchestrator.ts @<bryan>
-# TODO /services/orchestrator/src/debiaser/    @<bryan>
-# TODO /services/orchestrator/src/fallback/    @<bryan>
-# TODO /services/orchestrator/src/guardrails/  @<bryan>
-# TODO /tests/orchestrator/                    @<bryan>
-# TODO /tests/carebridge/amdProvider.test.mjs  @<bryan>
-# TODO /docs/AMD_SETUP.md                      @<bryan>
-# TODO /docs/AI_POLICY.md                      @<bryan>
+# --- Bryan (@zlxrnn): AMD inference & orchestrator providers ---
+/services/orchestrator/src/providers/              @zlxrnn
+/services/orchestrator/src/orchestrator.ts         @zlxrnn
+/services/orchestrator/src/debiaser/               @zlxrnn
+/services/orchestrator/src/fallback/               @zlxrnn
+/services/orchestrator/src/guardrails/             @zlxrnn
+/tests/orchestrator/                               @zlxrnn
+/tests/carebridge/amdProvider.test.mjs             @zlxrnn
+/docs/AMD_SETUP.md                                 @zlxrnn
+/docs/AI_POLICY.md                                 @zlxrnn
 
-# --- Justin: Safety, Privacy, Community ---
-# TODO /services/crisis-engine/                @<justin>
-# TODO /services/validator/                    @<justin>
-# TODO /services/auth/                         @<justin>
-# TODO /services/persistence/                  @<justin>
-# TODO /supabase/                              @<justin>
-# TODO /apps/web/src/app/crisis/               @<justin>
-# TODO /apps/web/src/app/consent/              @<justin>
-# TODO /apps/web/src/app/recovery/             @<justin>
-# TODO /apps/web/src/app/forum/                @<justin>
-# TODO /apps/web/src/app/api/forum/            @<justin>
-# TODO /apps/web/src/app/api/admin/            @<justin>
-# TODO /apps/web/src/app/api/sync/             @<justin>
-# TODO /apps/web/src/lib/crypto/               @<justin>
-# TODO /tests/crisis/ /tests/validator/ /tests/security/ /tests/forum/ /tests/crypto/ /tests/auth/ /tests/persistence/ /tests/persistence-pg/  @<justin>
-# TODO /docs/CAREBRIDGE_SAFETY_POLICY.md       @<justin>
+# --- Justin (@immanueljustinn): Safety, Privacy, Community ---
+/services/crisis-engine/                           @immanueljustinn
+/services/validator/                               @immanueljustinn
+/services/auth/                                    @immanueljustinn
+/services/persistence/                             @immanueljustinn
+/supabase/                                         @immanueljustinn
+/apps/web/src/app/crisis/                          @immanueljustinn
+/apps/web/src/app/consent/                         @immanueljustinn
+/apps/web/src/app/recovery/                        @immanueljustinn
+/apps/web/src/app/forum/                           @immanueljustinn
+/apps/web/src/app/api/forum/                       @immanueljustinn
+/apps/web/src/app/api/admin/                       @immanueljustinn
+/apps/web/src/app/api/sync/                        @immanueljustinn
+/apps/web/src/lib/crypto/                          @immanueljustinn
+/tests/crisis/                                     @immanueljustinn
+/tests/validator/                                  @immanueljustinn
+/tests/security/                                   @immanueljustinn
+/tests/forum/                                      @immanueljustinn
+/tests/crypto/                                     @immanueljustinn
+/tests/auth/                                       @immanueljustinn
+/tests/persistence/                                @immanueljustinn
+/tests/persistence-pg/                             @immanueljustinn
+/docs/CAREBRIDGE_SAFETY_POLICY.md                  @immanueljustinn
 
 # --- Radit: Voice, a11y, i18n ---
 # TODO /apps/web/src/app/ruang-ngobrol/        @<radit>
