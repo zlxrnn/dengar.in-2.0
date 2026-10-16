@@ -59,7 +59,9 @@ function datedSourceSuffix(field: EvidenceField, lang: Language): string {
 /** User text is literal content, never Markdown structure or inline HTML. */
 function exportText(value: string, md: boolean): string {
   if (!md) return value;
-  return value.replace(/[\\`*_{}\[\]<>!|~#+-]/g, '\\$&').replace(/\r\n?|\n/g, ' ');
+  return value.replace(/[\\`*_{}\[\]<>!|~#+-]/g, '\\$&')
+    .replace(/\r\n?|\n/g, ' ')
+    .replace(/^(\d{1,9})([.)])(?=[ \t])/, '$1\\$2');
 }
 
 export interface OpeningLinesSelection {

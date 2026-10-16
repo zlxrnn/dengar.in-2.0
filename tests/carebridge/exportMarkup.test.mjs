@@ -32,6 +32,10 @@ test('escaping also handles reference links, code, backslashes and table delimit
   const value = '[label][ref] `code` **bold** _italic_ \\ | cell';
   const md = buildCarePassportExport({ ...passport, concerns: [{ value }], selfHelp: [] }, { format: 'md' });
   assert.ok(md.includes('\\[label\\]\\[ref\\] \\`code\\` \\*\\*bold\\*\\* \\_italic\\_ \\\\ \\| cell'));
+  for (const value of ['1. nested list', '1) nested list']) {
+    const exported = buildCarePassportExport({ ...passport, concerns: [{ value }], selfHelp: [] }, { format: 'md' });
+    assert.ok(exported.includes(`- 1\\${value.slice(1)}`), 'numbered text must not introduce a nested list');
+  }
 });
 
 test('trusted knowledge-base attribution links and approval gate are preserved', () => {
